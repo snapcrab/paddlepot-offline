@@ -714,7 +714,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="section-head"><h2 id="settings-title">Settings</h2></div>
       <div class="rack-setting">
         <label><input type="checkbox" id="split-racks" aria-describedby="rack-help"> Winner and loser racks</label>
-        <p class="muted" id="rack-help">Remix four players from the same rack when possible. If no rack has four players, mix across racks.</p>
+        <p class="muted" id="rack-help">Open rack players can join either rack, with the longest waits first. If neither rack can fill a court with Open players, mix across all racks.</p>
       </div>
       <div class="actions">
         <button id="export" type="button">Back up JSON</button>
@@ -722,7 +722,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button id="new" class="danger" type="button">New session</button>
       </div>
       <p class="settings-help"><a href="https://github.com/snapcrab/paddlepot-offline" target="_blank" rel="noopener noreferrer">GitHub repository</a> · Find the user guide in the README.</p>
-      <small class="version">PaddlePot Offline v1.4.1</small>
+      <small class="version">PaddlePot Offline v1.4.2</small>
     </section>
   </div>
 </main>
@@ -902,18 +902,28 @@ function remixPools(session, waiting, count) {
   if (!session.splitRacks) return [waiting.slice(0, count * 4)];
 
   const position = new Map(waiting.map((id, index) => [id, index]));
-  const racks = waitingRacks(session, waiting);
-  const pools = racks.map(() => []);
+  const [winners, losers] = waitingRacks(session, waiting);
+  const oppositeRacks = [new Set(losers), new Set(winners)];
+  const pools = [[], []];
+  let remaining = waiting;
   let slots = count;
   while (slots > 0) {
-    const nextRack = racks.filter(rack => rack.length >= 4)
-      .sort((a, b) => position.get(a[0]) - position.get(b[0]))[0];
-    if (!nextRack) break;
-    pools[racks.indexOf(nextRack)].push(...nextRack.splice(0, 4));
+    const candidates = oppositeRacks.map((opposite, rack) => ({
+      rack, players: remaining.filter(id => !opposite.has(id)).slice(0, 4)
+    })).filter(candidate => candidate.players.length === 4);
+    if (!candidates.length) break;
+    candidates.sort((a, b) => {
+      // A shared Open player can lead both groups. Compare the first player that differs.
+      const firstDifference = a.players.findIndex((id, index) => id !== b.players[index]);
+      return firstDifference === -1 ? 0
+        : position.get(a.players[firstDifference]) - position.get(b.players[firstDifference]);
+    });
+    const { rack, players } = candidates[0];
+    pools[rack].push(...players);
+    remaining = remaining.filter(id => !players.includes(id));
     slots--;
   }
-  const leftovers = racks.flat().sort((a, b) => position.get(a) - position.get(b));
-  return [...pools, leftovers.slice(0, slots * 4)].filter(pool => pool.length);
+  return [...pools, remaining.slice(0, slots * 4)].filter(pool => pool.length);
 }
 
 function pairKey(a, b, size) {
@@ -982,7 +992,7 @@ function schedule(session, random = Math.random) {
   let best;
   let bestCost = Infinity;
   for (let attempt = 0; attempt < 160; attempt++) {
-    // Shuffle within each pool so complete racks stay together.
+    // Shuffle within each pool so Winner and Loser groups can each include Open players.
     const lineup = pools.flatMap(pool => shuffle(pool, random));
     const pairings = open.slice(0, count).map((court, index) => {
       const group = lineup.slice(index * 4, index * 4 + 4);
