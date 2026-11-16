@@ -116,14 +116,18 @@
   .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
   .section-head, .court header { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
   .cards { display: grid; gap: 12px; }
+  .save-all { width: 100%; margin-top: 12px; }
   .tag { color: var(--ball); font-weight: 600; }
   .teams { display: grid; gap: 6px; }
   .team { display: grid; grid-template-columns: minmax(0, 1fr) 4.3rem; align-items: center; gap: 8px; padding: 6px 8px; background: var(--ink-raised); border-radius: var(--radius-sm); }
-  .team label { font-weight: 600; overflow-wrap: anywhere; }
+  .team label, .team-names { font-weight: 600; overflow-wrap: anywhere; }
   .team small { display: block; color: var(--text-dim); font-weight: 400; }
   .team input { width: 100%; text-align: center; font-family: var(--font-mono); font-weight: 600; }
+  .saved-points { text-align: center; font-size: 16px; }
   .teams button { margin-top: 4px; width: 100%; }
   .bench { margin: 10px 0; overflow-wrap: anywhere; }
+  .bench small { margin-left: 6px; }
+  .waiting-names { display: block; margin-top: 3px; }
   .leaderboard-list { display: grid; gap: 6px; margin-top: 10px; }
   .leaderboard-player {
     display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center;
@@ -132,6 +136,8 @@
   .leaderboard-player[aria-expanded="true"] { border-color: var(--ball-dim); }
   .leaderboard-name { display: block; overflow-wrap: anywhere; }
   .leaderboard-record { display: block; margin-top: 3px; font-weight: 400; }
+  .leaderboard-metrics { display: grid; gap: 2px; text-align: right; white-space: nowrap; }
+  .leaderboard-metrics small { font-weight: 400; }
   .mono, .result strong { font-family: var(--font-mono); font-weight: 600; }
   .match-history { list-style: none; margin: 0; padding: 8px 10px 8px 28px; display: grid; gap: 6px; }
   .match-history li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; overflow-wrap: anywhere; }
@@ -154,7 +160,9 @@
   .add-player summary { color: var(--ball); cursor: pointer; min-height: 44px; align-content: center; font-weight: 600; }
   .add-player form { display: grid; gap: 8px; margin-bottom: 10px; }
   .add-player input { width: 100%; }
-  .version { display: block; margin-top: 18px; color: var(--text-dim); }
+  .settings-help { margin-top: 14px; }
+  .settings-help a { color: var(--ball); text-underline-offset: 2px; }
+  .version { display: block; margin-top: 12px; color: var(--text-dim); }
   .danger { color: var(--coral); }
   dialog { width: min(420px, calc(100% - 2rem)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink-card); color: var(--text); padding: 16px; }
   dialog::backdrop { background: #12181ACC; }
@@ -662,6 +670,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       </div>
       <p class="bench" id="bench"></p>
       <div class="cards" id="cards"></div>
+      <button type="button" class="primary save-all" id="save-all-courts" disabled hidden>Save all courts</button>
     </section>
     <section class="panel" id="players" aria-labelledby="players-title" hidden>
       <div class="section-head"><h2 id="players-title">Players</h2><span id="player-total" class="muted"></span></div>
@@ -680,7 +689,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     </section>
     <section id="leaderboard" aria-labelledby="leaderboard-title" hidden>
       <div class="section-head"><h2 id="leaderboard-title">Leaderboard</h2></div>
-      <p class="muted">Ranked by wins, then point differential. Tap a name for match history.</p>
+      <p class="muted">Ranked by win percentage, then point differential per game. Draws count as half a win. Tap a name for match history.</p>
       <div class="leaderboard-list" id="standings"></div>
     </section>
     <section class="panel" id="courts" aria-labelledby="courts-title" hidden>
@@ -699,12 +708,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button id="import" type="button">Restore JSON</button>
         <button id="new" class="danger" type="button">New session</button>
       </div>
-      <small class="version">PaddlePot Offline v1.2.0</small>
+      <p class="settings-help"><a href="https://github.com/snapcrab/paddlepot-offline" target="_blank" rel="noopener noreferrer">GitHub repository</a> · Find the user guide in the README.</p>
+      <small class="version">PaddlePot Offline v1.2.1</small>
     </section>
   </div>
 </main>
 <dialog id="correction" aria-labelledby="correction-title">
-  <h2 id="correction-title">Correct score</h2>
+  <h2 id="correction-title">Modify score</h2>
   <p class="muted hint" id="correction-detail"></p>
   <form id="correction-form">
     <div id="correction-fields" class="teams"></div>
@@ -750,7 +760,7 @@ function validScore(score) {
 function makeSession(players, courts) {
   return {
     format: FORMAT, version: BACKUP_VERSION, players, courts, mode: "open", games: [],
-    unavailablePlayers: [], unavailableCourts: []
+    unavailablePlayers: [], unavailableCourts: [], waitingSince: players.map(() => 0)
   };
 }
 
@@ -760,6 +770,32 @@ function readAvailability(ids, min, max) {
     throw new Error("The backup contains invalid availability settings.");
   }
   return ids;
+}
+
+function readWaitingOrder(order, playerCount, games) {
+  if (order === undefined) {
+    const inferred = Array(playerCount).fill(0);
+    for (const game of games) {
+      if (game.score !== null) {
+        for (const id of game.teams.flat()) inferred[id] = game.mix;
+      }
+    }
+    return inferred;
+  }
+  if (!Array.isArray(order) || order.length !== playerCount ||
+      !order.every(value => isInteger(value, 0, Number.MAX_SAFE_INTEGER))) {
+    throw new Error("The backup contains an invalid waiting order.");
+  }
+  // Only relative order matters. Keep imported queue positions small.
+  const ranks = new Map([...new Set(order)].sort((a, b) => a - b).map((value, rank) => [value, rank]));
+  return order.map(value => ranks.get(value));
+}
+
+function restartWait(session, ids) {
+  const order = [...session.waitingSince];
+  const latest = Math.max(...order) + 1;
+  shuffle(ids, Math.random).forEach((id, offset) => { order[id] = latest + offset; });
+  return order;
 }
 
 function readBackup(raw) {
@@ -814,7 +850,8 @@ function readBackup(raw) {
   return {
     ...makeSession(data.players, data.courts), mode: data.mode, games,
     unavailablePlayers: readAvailability(data.unavailablePlayers, 0, data.players.length - 1),
-    unavailableCourts: readAvailability(data.unavailableCourts, 1, data.courts)
+    unavailableCourts: readAvailability(data.unavailableCourts, 1, data.courts),
+    waitingSince: readWaitingOrder(data.waitingSince, data.players.length, games)
   };
 }
 
@@ -825,7 +862,8 @@ function availability(session) {
   const open = Array.from({ length: session.courts }, (_, index) => index + 1)
     .filter(court => !activeCourts.has(court) && !session.unavailableCourts.includes(court));
   const waiting = session.players.map((_, id) => id)
-    .filter(id => !playing.has(id) && !session.unavailablePlayers.includes(id));
+    .filter(id => !playing.has(id) && !session.unavailablePlayers.includes(id))
+    .sort((a, b) => session.waitingSince[a] - session.waitingSince[b] || a - b);
   const count = session.mode === "all" && active.length ? 0 : Math.min(open.length, Math.floor(waiting.length / 4));
   return { active, open, waiting, count };
 }
@@ -842,24 +880,19 @@ function recordPair(history, key, mix) {
 }
 
 function schedulingHistory(session) {
-  const players = session.players.map(() => ({ games: 0, last: 0 }));
   const partners = new Map();
   const opponents = new Map();
-  const size = players.length;
+  const size = session.players.length;
   for (const game of session.games) {
     const [first, second] = game.teams;
     for (const team of game.teams) {
       recordPair(partners, pairKey(team[0], team[1], size), game.mix);
-      for (const id of team) {
-        players[id].games++;
-        players[id].last = game.mix;
-      }
     }
     for (const a of first) {
       for (const b of second) recordPair(opponents, pairKey(a, b, size), game.mix);
     }
   }
-  return { players, partners, opponents, size };
+  return { partners, opponents, size };
 }
 
 function shuffle(items, random) {
@@ -896,14 +929,12 @@ function schedule(session, random = Math.random) {
   if (!count) return [];
   const mix = (session.games.at(-1)?.mix ?? 0) + 1;
   const history = schedulingHistory(session);
-  const comparePriority = (a, b) => history.players[a].games - history.players[b].games ||
-    history.players[a].last - history.players[b].last;
+  const eligible = waiting.slice(0, count * 4);
 
   let best;
   let bestCost = Infinity;
   for (let attempt = 0; attempt < 160; attempt++) {
-    // Fairness determines who gets a court. Only players tied at the cutoff can trade places.
-    const eligible = shuffle(waiting, random).sort(comparePriority).slice(0, count * 4);
+    // Lineup search changes pairings among the players next in the queue.
     const lineup = shuffle(eligible, random);
     const pairings = open.slice(0, count).map((court, index) => {
       const group = lineup.slice(index * 4, index * 4 + 4);
@@ -934,7 +965,15 @@ function standings(session) {
       }
     });
   }
-  return rows.sort((a, b) => b.wins - a.wins || b.difference - a.difference || compareNames(a.name, b.name));
+  for (const row of rows) {
+    row.winPercentage = row.played ? (row.wins + row.draws / 2) / row.played * 100 : null;
+    row.differencePerGame = row.played ? row.difference / row.played : null;
+  }
+  return rows.sort((a, b) =>
+    Number(b.played > 0) - Number(a.played > 0) ||
+    b.winPercentage - a.winPercentage || b.differencePerGame - a.differencePerGame ||
+    compareNames(a.name, b.name)
+  );
 }
 const byId = id => document.getElementById(id);
 const sectionTabs = Array.from(byId("session-nav").querySelectorAll("button"));
@@ -1023,35 +1062,79 @@ function formScore(form) {
   return Array.from(form.querySelectorAll("input"), input => input.valueAsNumber);
 }
 
-function updateScore(index, score, message) {
-  const games = session.games.map((game, id) => id === index ? { ...game, score } : game);
-  drafts.delete(index);
-  save({ ...session, games }, message);
+function updateScores(entries, message) {
+  const scores = new Map(entries);
+  const released = [];
+  const games = session.games.map((game, index) => {
+    if (!scores.has(index)) return game;
+    if (game.score === null) released.push(...game.teams.flat());
+    drafts.delete(index);
+    return { ...game, score: scores.get(index) };
+  });
+  const waitingSince = released.length ? restartWait(session, released) : session.waitingSince;
+  save({ ...session, games, waitingSince }, message);
+}
+
+function enteredCourtScores() {
+  return Array.from(byId("cards").querySelectorAll("form[data-game-index]"), form => [
+    Number(form.dataset.gameIndex), formScore(form)
+  ]).filter(([, score]) => validScore(score));
+}
+
+function syncSaveAll() {
+  byId("save-all-courts").disabled = enteredCourtScores().length === 0;
+}
+
+function modifyScoreButton(index, id) {
+  const button = element("button", { type: "button", id, textContent: "Modify score" });
+  button.setAttribute("aria-label", "Modify score for game " + (index + 1));
+  button.addEventListener("click", () => openCorrection(index, id));
+  return button;
 }
 
 function courtCard(court, game, index) {
   const title = element("h3", { textContent: "Court " + court, tabIndex: -1, id: "court-title-" + court });
   const unavailable = session.unavailableCourts.includes(court);
-  const tag = element("span", { className: unavailable ? "tag loss" : "tag", textContent: courtStatus(court, Boolean(game)) });
+  const inPlay = game?.score === null;
+  const tag = element("span", { className: unavailable ? "tag loss" : "tag", textContent: courtStatus(court, inPlay) });
   const card = element("article", { className: "court" }, [element("header", {}, [title, tag])]);
-  if (game) {
+  if (inPlay) {
     const values = drafts.get(index) ?? [];
     const fields = game.teams.map((team, teamIndex) => scoreField(team, index, teamIndex, values[teamIndex]));
     const form = element("form", { className: "teams" }, [
       ...fields, element("button", { type: "submit", className: "primary", textContent: "Log score & finish" })
     ]);
+    form.dataset.gameIndex = index;
     form.setAttribute("aria-labelledby", title.id);
     form.addEventListener("input", () => {
       drafts.set(index, Array.from(form.querySelectorAll("input"), input => input.value));
+      syncSaveAll();
     });
     form.addEventListener("submit", event => {
       event.preventDefault();
       const score = formScore(form);
       if (!validScore(score)) return;
-      updateScore(index, score, "Score saved. Court " + court + (unavailable ? " is unavailable." : " is open."));
+      updateScores([[index, score]], "Score saved. Court " + court + (unavailable ? " is unavailable." : " is open."));
       byId(title.id).focus();
     });
     card.append(form);
+  } else if (game) {
+    const scores = game.teams.map((team, side) => element("div", { className: "team" }, [
+      element("span", { className: "team-names" }, [
+        element("small", { textContent: "Team " + (side ? "B" : "A") + " score" }),
+        names(team)
+      ]),
+      element("strong", {
+        className: "mono saved-points",
+        textContent: game.score[side]
+      })
+    ]));
+    const saved = element("div", { className: "teams" }, [
+      ...scores, modifyScoreButton(index, "play-correct-" + index)
+    ]);
+    saved.setAttribute("role", "group");
+    saved.setAttribute("aria-label", "Saved score for game " + (index + 1));
+    card.append(saved);
   }
   return card;
 }
@@ -1065,7 +1148,8 @@ function courtStatus(court, active) {
 function updateAvailability(key, id, label, unavailable, focusId) {
   const ids = session[key].filter(value => value !== id);
   if (unavailable) ids.push(id);
-  save({ ...session, [key]: ids }, label + (unavailable ? " is unavailable for the next mix." : " is available for the next mix."));
+  const waitingSince = key === "unavailablePlayers" && !unavailable ? restartWait(session, [id]) : session.waitingSince;
+  save({ ...session, [key]: ids, waitingSince }, label + (unavailable ? " is unavailable for the next mix." : " is available for the next mix."));
   byId(focusId).focus();
 }
 
@@ -1108,7 +1192,11 @@ function courtRow(court, active) {
 }
 
 function formatDifference(value) {
-  return value > 0 ? "+" + value : String(value);
+  return (value > 0 ? "+" : "") + value.toFixed(2);
+}
+
+function outcomeColour(difference) {
+  return difference > 0 ? "win" : difference < 0 ? "loss" : "muted";
 }
 
 function gameCount(played) {
@@ -1128,7 +1216,11 @@ function matchHistory(player, id) {
     const result = difference > 0 ? "Win" : difference < 0 ? "Loss" : "Draw";
     list.append(element("li", {}, [
       element("span", { textContent: "M" + (index + 1) + " · Court " + court + " · w/ " + session.players[partner] + " vs " + opponents }),
-      element("span", { className: "mono " + result.toLowerCase(), textContent: score[side] + "–" + score[1 - side], title: result })
+      element("span", {
+        className: "mono " + outcomeColour(difference),
+        textContent: score[side] + "–" + score[1 - side],
+        title: result
+      })
     ]));
   }
   if (!list.children.length) list.append(element("li", { textContent: "No completed matches." }));
@@ -1146,7 +1238,19 @@ function renderLeaderboard(rows) {
         element("span", { className: "leaderboard-name", textContent: row.name }),
         element("span", { className: "leaderboard-record muted", textContent: gameCount(row.played) + " played · " + record })
       ]),
-      element("span", { className: "mono " + (row.difference > 0 ? "win" : row.difference < 0 ? "loss" : "muted"), textContent: formatDifference(row.difference), title: "Point differential" })
+      element("span", { className: "leaderboard-metrics" }, [
+        element("span", {
+          className: "mono", title: "Win percentage",
+          textContent: row.winPercentage === null ? "—" : row.winPercentage.toFixed(1) + "%"
+        }),
+        element("small", {}, [
+          element("span", { className: "muted", textContent: "Diff/game " }),
+          element("span", {
+            className: "mono " + outcomeColour(row.differencePerGame), title: "Point differential per game",
+            textContent: row.differencePerGame === null ? "—" : formatDifference(row.differencePerGame)
+          })
+        ])
+      ])
     ]);
     button.setAttribute("aria-controls", historyId);
     button.setAttribute("aria-expanded", String(expanded));
@@ -1182,20 +1286,28 @@ function render() {
   byId("court-status").textContent = active.length + " in play · " + open.length + " open" +
     (unavailable ? " · " + unavailable + " unavailable" : "");
   byId("bench").replaceChildren(
-    element("strong", { textContent: "Waiting (" + waiting.length + ")" }),
-    waiting.length ? " · " + waiting.map(id => session.players[id] + " (" + played.get(id) + ")").join(", ") : ""
+    element("strong", { textContent: "Waiting queue (" + waiting.length + ")" }),
+    ...(waiting.length ? [
+      element("small", { className: "muted", textContent: "Longest wait first" }),
+      element("span", {
+        className: "waiting-names",
+        textContent: waiting.map(id => session.players[id] + " (" + played.get(id) + ")").join(", ")
+      })
+    ] : [])
   );
 
-  const activeByCourt = new Map();
+  const latestByCourt = new Map();
   const completed = [];
   session.games.forEach((game, index) => {
-    if (game.score === null) activeByCourt.set(game.court, [game, index]);
-    else completed.push([game, index]);
+    latestByCourt.set(game.court, [game, index]);
+    if (game.score !== null) completed.push([game, index]);
   });
   byId("cards").replaceChildren(...Array.from({ length: session.courts }, (_, index) => {
     const court = index + 1;
-    return courtCard(court, ...(activeByCourt.get(court) ?? []));
+    return courtCard(court, ...(latestByCourt.get(court) ?? []));
   }));
+  byId("save-all-courts").hidden = active.length === 0;
+  syncSaveAll();
 
   const playerCourts = new Map(active.flatMap(game => game.teams.flat().map(id => [id, game.court])));
   byId("player-total").textContent = session.players.length + " players";
@@ -1207,15 +1319,13 @@ function render() {
   byId("court-total").textContent = session.courts + (session.courts === 1 ? " doubles court" : " doubles courts");
   byId("court-list").replaceChildren(...Array.from({ length: session.courts }, (_, index) => {
     const court = index + 1;
-    return courtRow(court, activeByCourt.has(court));
+    return courtRow(court, latestByCourt.get(court)?.[0].score === null);
   }));
 
   renderLeaderboard(rows);
   const results = document.createDocumentFragment();
   for (const [game, index] of completed.reverse()) {
-    const button = element("button", { type: "button", id: "correct-" + index, textContent: "Correct score" });
-    button.setAttribute("aria-label", "Correct score for game " + (index + 1));
-    button.addEventListener("click", () => openCorrection(index));
+    const button = modifyScoreButton(index, "correct-" + index);
     const detail = element("div", {}, [
       element("p", { className: "hint muted", textContent: "Game " + (index + 1) + " · Court " + game.court }),
       element("p", {}, [names(game.teams[0]) + "  ", element("strong", { textContent: game.score.join("–") }), "  " + names(game.teams[1])])
@@ -1226,13 +1336,14 @@ function render() {
   byId("results").replaceChildren(results);
 }
 
-function openCorrection(index) {
+function openCorrection(index, triggerId) {
   const game = session.games[index];
-  editing = index;
+  editing = { index, triggerId };
   byId("correction-detail").textContent = "Game " + (index + 1) + " · Court " + game.court;
   byId("correction-fields").replaceChildren(...game.teams.map((team, teamIndex) =>
     scoreField(team, "correction", teamIndex, game.score[teamIndex])
   ));
+  byId(triggerId).focus({ preventScroll: true });
   byId("correction").showModal();
 }
 
@@ -1241,10 +1352,18 @@ byId("correction-form").addEventListener("submit", event => {
   event.preventDefault();
   const score = formScore(event.currentTarget);
   if (!validScore(score)) return;
-  const index = editing;
+  const { index, triggerId } = editing;
   byId("correction").close();
-  updateScore(index, score, "Game " + (index + 1) + " corrected. Leaderboard updated.");
-  byId("correct-" + index).focus();
+  updateScores([[index, score]], "Game " + (index + 1) + " corrected. Leaderboard updated.");
+  byId(triggerId).focus();
+});
+
+byId("save-all-courts").addEventListener("click", () => {
+  const entries = enteredCourtScores();
+  if (!entries.length) return;
+  const firstCourt = session.games[entries[0][0]].court;
+  updateScores(entries, entries.length === 1 ? "Score saved on 1 court." : "Scores saved on " + entries.length + " courts.");
+  byId("court-title-" + firstCourt).focus();
 });
 
 byId("court-count").append(...Array.from({ length: MAX_COURTS }, (_, index) =>
@@ -1299,6 +1418,7 @@ byId("setup-form").addEventListener("submit", event => {
     return;
   }
   const next = makeSession(players, Number(byId("court-count").value));
+  next.waitingSince = shuffle(next.waitingSince.map((_, id) => id), Math.random);
   next.games = schedule(next);
   resetSessionView();
   save(next, "Mixer started. The first games are ready.");
@@ -1323,7 +1443,8 @@ byId("add-player-form").addEventListener("submit", event => {
   }
   const id = session.players.length;
   input.value = "";
-  save({ ...session, players: [...session.players, name] }, name + " added and available for the next mix.");
+  save({ ...session, players: [...session.players, name], waitingSince: restartWait(session, [id]) },
+    name + " added and available for the next mix.");
   if (session.players.length === MAX_PLAYERS) byId("player-availability-" + id).focus();
   else input.focus();
 });
