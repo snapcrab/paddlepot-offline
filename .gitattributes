@@ -1,0 +1,3 @@
+# Keep the hosted HTML and the downloadable file byte-for-byte identical.
+/paddlepot-offline.html text eol=lf
+*.pdf binary
