@@ -124,16 +124,36 @@
   .team input { width: 100%; text-align: center; font-family: var(--font-mono); font-weight: 600; }
   .teams button { margin-top: 4px; width: 100%; }
   .bench { margin: 10px 0; overflow-wrap: anywhere; }
-  .metrics { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; }
-  caption { caption-side: bottom; text-align: left; color: var(--text-dim); padding-top: 10px; }
-  th, td { padding: 8px 6px; text-align: right; border-bottom: 1px solid var(--line); }
-  th:first-child, td:first-child { text-align: left; overflow-wrap: anywhere; }
-  th { white-space: nowrap; }
-  td:not(:first-child), .result strong { font-family: var(--font-mono); font-weight: 600; }
+  .leaderboard-list { display: grid; gap: 6px; margin-top: 10px; }
+  .leaderboard-player {
+    display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center;
+    gap: 8px; text-align: left; width: 100%; padding: 10px 14px; border-radius: var(--radius);
+  }
+  .leaderboard-player[aria-expanded="true"] { border-color: var(--ball-dim); }
+  .leaderboard-name { display: block; overflow-wrap: anywhere; }
+  .leaderboard-record { display: block; margin-top: 3px; font-weight: 400; }
+  .mono, .result strong { font-family: var(--font-mono); font-weight: 600; }
+  .match-history { list-style: none; margin: 0; padding: 8px 10px 8px 28px; display: grid; gap: 6px; }
+  .match-history li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; overflow-wrap: anywhere; }
+  .win { color: var(--ball); }
+  .loss { color: var(--coral); }
   .status-list { list-style: none; margin: 0; padding: 0; }
   .status-list li, .result { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; border-top: 1px solid var(--line); padding: 10px 0; overflow-wrap: anywhere; }
   .status-list li:last-child, .result:last-child { padding-bottom: 0; }
+  .status-list small { display: block; margin-top: 2px; }
+  .availability-switch { width: 60px; min-height: 44px; display: grid; place-items: center; padding: 0; border: 0; background: transparent; }
+  .availability-switch span { width: 52px; height: 30px; border-radius: 15px; background: var(--coral); display: flex; align-items: center; padding: 3px; justify-content: flex-end; }
+  .availability-switch[aria-checked="true"] span { background: var(--ball); justify-content: flex-start; }
+  .availability-switch span::before { content: ""; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; }
+  .circle-choices { display: flex; gap: 5px; }
+  .circle-choice { width: 44px; height: 44px; padding: 0; border-radius: 50%; color: var(--text-dim); background: var(--ink-raised); }
+  .circle-choice[aria-pressed="true"] { background: var(--ball); border-color: var(--ball); color: var(--on-ball); }
+  .circle-choice.danger[aria-pressed="true"] { background: var(--coral); border-color: var(--coral); color: #351009; }
+  .availability-help { margin-bottom: 10px; }
+  .add-player { margin: 0 0 12px; }
+  .add-player summary { color: var(--ball); cursor: pointer; min-height: 44px; align-content: center; font-weight: 600; }
+  .add-player form { display: grid; gap: 8px; margin-bottom: 10px; }
+  .add-player input { width: 100%; }
   .version { display: block; margin-top: 18px; color: var(--text-dim); }
   .danger { color: var(--coral); }
   dialog { width: min(420px, calc(100% - 2rem)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink-card); color: var(--text); padding: 16px; }
@@ -589,7 +609,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <button type="button" aria-controls="play" aria-current="page">Play</button>
     <button type="button" aria-controls="players">Players</button>
     <button type="button" aria-controls="leaderboard">Leaderboard</button>
-    <button type="button" aria-controls="stats">Stats</button>
     <button type="button" aria-controls="courts">Courts</button>
     <button type="button" aria-controls="history">Results</button>
     <button type="button" aria-controls="settings">Settings</button>
@@ -626,12 +645,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <button type="button" class="restore" id="restore-setup">Restore JSON</button>
   </section>
   <div id="session" hidden>
-    <section id="play" aria-labelledby="play-title">
-      <div class="section-head">
-        <h2 id="play-title">Continuous play</h2>
-        <span id="court-status" class="muted"></span>
-      </div>
+    <section id="play" aria-labelledby="mode-title">
       <div class="toolbar panel">
+        <div class="section-head">
+          <h2 id="mode-title">Mode</h2>
+          <span id="court-status" class="muted"></span>
+        </div>
         <p id="remix-help" class="muted"></p>
         <div class="actions">
           <select id="mode" aria-label="Remix timing">
@@ -646,26 +665,27 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     </section>
     <section class="panel" id="players" aria-labelledby="players-title" hidden>
       <div class="section-head"><h2 id="players-title">Players</h2><span id="player-total" class="muted"></span></div>
+      <p class="muted availability-help">Availability applies to the next mix. Games already in play can finish.</p>
+      <details class="add-player" id="add-player">
+        <summary>+ Add player</summary>
+        <form id="add-player-form">
+          <label for="new-player">Player name</label>
+          <input id="new-player" aria-describedby="new-player-help">
+          <p class="muted" id="new-player-help">Leave blank to assign the next player number.</p>
+          <button type="submit" class="primary">Add player</button>
+        </form>
+      </details>
+      <p class="muted availability-help" id="roster-full" hidden>The roster is full.</p>
       <ul class="status-list" id="player-list"></ul>
     </section>
-    <section class="panel metrics" id="leaderboard" aria-labelledby="leaderboard-title" hidden>
+    <section id="leaderboard" aria-labelledby="leaderboard-title" hidden>
       <div class="section-head"><h2 id="leaderboard-title">Leaderboard</h2></div>
-      <table>
-        <caption>Ranked by wins, then point differential. GP = games played.</caption>
-        <thead><tr><th scope="col">Player</th><th scope="col"><abbr title="Games played">GP</abbr></th><th scope="col">Wins</th><th scope="col"><abbr title="Point differential">+/−</abbr></th></tr></thead>
-        <tbody id="standings"></tbody>
-      </table>
-    </section>
-    <section class="panel metrics" id="stats" aria-labelledby="stats-title" hidden>
-      <div class="section-head"><h2 id="stats-title">Stats</h2></div>
-      <table>
-        <caption>Completed games only. GP = games played.</caption>
-        <thead><tr><th scope="col">Player</th><th scope="col"><abbr title="Games played">GP</abbr></th><th scope="col"><abbr title="Wins">W</abbr></th><th scope="col"><abbr title="Draws">D</abbr></th><th scope="col"><abbr title="Losses">L</abbr></th><th scope="col"><abbr title="Point differential">+/−</abbr></th></tr></thead>
-        <tbody id="stats-rows"></tbody>
-      </table>
+      <p class="muted">Ranked by wins, then point differential. Tap a name for match history.</p>
+      <div class="leaderboard-list" id="standings"></div>
     </section>
     <section class="panel" id="courts" aria-labelledby="courts-title" hidden>
       <div class="section-head"><h2 id="courts-title">Courts</h2><span id="court-total" class="muted"></span></div>
+      <p class="muted availability-help">D = Doubles · U = Unavailable. Games already in play can finish.</p>
       <ul class="status-list" id="court-list"></ul>
     </section>
     <section class="panel" id="history" aria-labelledby="history-title" hidden>
@@ -679,7 +699,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button id="import" type="button">Restore JSON</button>
         <button id="new" class="danger" type="button">New session</button>
       </div>
-      <small class="version">PaddlePot Offline v1.1.0</small>
+      <small class="version">PaddlePot Offline v1.2.0</small>
     </section>
   </div>
 </main>
@@ -728,7 +748,18 @@ function validScore(score) {
 }
 
 function makeSession(players, courts) {
-  return { format: FORMAT, version: BACKUP_VERSION, players, courts, mode: "open", games: [] };
+  return {
+    format: FORMAT, version: BACKUP_VERSION, players, courts, mode: "open", games: [],
+    unavailablePlayers: [], unavailableCourts: []
+  };
+}
+
+function readAvailability(ids, min, max) {
+  if (ids === undefined) return [];
+  if (!Array.isArray(ids) || !ids.every(id => isInteger(id, min, max)) || new Set(ids).size !== ids.length) {
+    throw new Error("The backup contains invalid availability settings.");
+  }
+  return ids;
 }
 
 function readBackup(raw) {
@@ -780,7 +811,11 @@ function readBackup(raw) {
     }
     games.push({ mix: game.mix, court: game.court, teams: game.teams, score: game.score });
   }
-  return { ...makeSession(data.players, data.courts), mode: data.mode, games };
+  return {
+    ...makeSession(data.players, data.courts), mode: data.mode, games,
+    unavailablePlayers: readAvailability(data.unavailablePlayers, 0, data.players.length - 1),
+    unavailableCourts: readAvailability(data.unavailableCourts, 1, data.courts)
+  };
 }
 
 function availability(session) {
@@ -788,8 +823,9 @@ function availability(session) {
   const playing = new Set(active.flatMap(game => game.teams.flat()));
   const activeCourts = new Set(active.map(game => game.court));
   const open = Array.from({ length: session.courts }, (_, index) => index + 1)
-    .filter(court => !activeCourts.has(court));
-  const waiting = session.players.map((_, id) => id).filter(id => !playing.has(id));
+    .filter(court => !activeCourts.has(court) && !session.unavailableCourts.includes(court));
+  const waiting = session.players.map((_, id) => id)
+    .filter(id => !playing.has(id) && !session.unavailablePlayers.includes(id));
   const count = session.mode === "all" && active.length ? 0 : Math.min(open.length, Math.floor(waiting.length / 4));
   return { active, open, waiting, count };
 }
@@ -884,7 +920,7 @@ function schedule(session, random = Math.random) {
 }
 
 function standings(session) {
-  const rows = session.players.map(name => ({ name, played: 0, wins: 0, draws: 0, difference: 0 }));
+  const rows = session.players.map((name, id) => ({ id, name, played: 0, wins: 0, draws: 0, difference: 0 }));
   for (const { teams, score } of session.games) {
     if (score === null) continue;
     teams.forEach((team, index) => {
@@ -908,6 +944,7 @@ let session = null;
 let storageAvailable = true;
 let savedLocally = false;
 let editing = null;
+let expandedPlayer = null;
 
 function element(tag, settings = {}, children = []) {
   const node = document.createElement(tag);
@@ -938,6 +975,14 @@ function showSection(id) {
     byId(target).hidden = !selected;
   }
   if (id === "play") byId("session-nav").scrollLeft = 0;
+}
+
+function resetSessionView() {
+  drafts.clear();
+  expandedPlayer = null;
+  byId("add-player").open = false;
+  byId("add-player-form").reset();
+  showSection("play");
 }
 
 function save(next, message) {
@@ -986,7 +1031,8 @@ function updateScore(index, score, message) {
 
 function courtCard(court, game, index) {
   const title = element("h3", { textContent: "Court " + court, tabIndex: -1, id: "court-title-" + court });
-  const tag = element("span", { className: "tag", textContent: game ? "In play" : "Open" });
+  const unavailable = session.unavailableCourts.includes(court);
+  const tag = element("span", { className: unavailable ? "tag loss" : "tag", textContent: courtStatus(court, Boolean(game)) });
   const card = element("article", { className: "court" }, [element("header", {}, [title, tag])]);
   if (game) {
     const values = drafts.get(index) ?? [];
@@ -1002,7 +1048,7 @@ function courtCard(court, game, index) {
       event.preventDefault();
       const score = formScore(form);
       if (!validScore(score)) return;
-      updateScore(index, score, "Score saved. Court " + court + " is open.");
+      updateScore(index, score, "Score saved. Court " + court + (unavailable ? " is unavailable." : " is open."));
       byId(title.id).focus();
     });
     card.append(form);
@@ -1010,16 +1056,108 @@ function courtCard(court, game, index) {
   return card;
 }
 
-function statusRow(label, status) {
-  return element("li", {}, [element("span", { textContent: label }), element("span", { className: "muted", textContent: status })]);
+function courtStatus(court, active) {
+  const unavailable = session.unavailableCourts.includes(court);
+  if (active) return unavailable ? "In play · closes after score" : "In play";
+  return unavailable ? "Unavailable" : "Open";
 }
 
-function metricRow(values) {
-  return element("tr", {}, values.map(value => element("td", { textContent: value })));
+function updateAvailability(key, id, label, unavailable, focusId) {
+  const ids = session[key].filter(value => value !== id);
+  if (unavailable) ids.push(id);
+  save({ ...session, [key]: ids }, label + (unavailable ? " is unavailable for the next mix." : " is available for the next mix."));
+  byId(focusId).focus();
+}
+
+function playerRow(id, name, played, court) {
+  const unavailable = session.unavailablePlayers.includes(id);
+  const status = court ? "Court " + court + (unavailable ? " · unavailable next mix" : "") : unavailable ? "Unavailable" : "Waiting";
+  const toggle = element("button", { id: "player-availability-" + id, type: "button", className: "availability-switch" }, [
+    element("span")
+  ]);
+  toggle.setAttribute("role", "switch");
+  toggle.setAttribute("aria-label", name + " available for the next mix");
+  toggle.setAttribute("aria-checked", String(!unavailable));
+  toggle.addEventListener("click", () => updateAvailability("unavailablePlayers", id, name, !unavailable, toggle.id));
+  const detail = element("div", {}, [
+    name, element("small", { className: "muted", textContent: gameCount(played) + " played · " + status })
+  ]);
+  return element("li", {}, [detail, toggle]);
+}
+
+function courtRow(court, active) {
+  const label = "Court " + court;
+  const unavailable = session.unavailableCourts.includes(court);
+  const choices = [[false, "D", "Doubles"], [true, "U", "Unavailable"]].map(([off, letter, title]) => {
+    const button = element("button", {
+      type: "button", id: "court-" + court + "-" + letter, title, textContent: letter,
+      className: off ? "circle-choice danger" : "circle-choice"
+    });
+    button.setAttribute("aria-label", label + ": " + title);
+    button.setAttribute("aria-pressed", String(off === unavailable));
+    button.addEventListener("click", () => {
+      if (off !== unavailable) updateAvailability("unavailableCourts", court, label, off, button.id);
+    });
+    return button;
+  });
+  const controls = element("div", { className: "circle-choices" }, choices);
+  controls.setAttribute("role", "group");
+  controls.setAttribute("aria-label", label + " availability");
+  const detail = element("div", {}, [label, element("small", { className: "muted", textContent: courtStatus(court, active) })]);
+  return element("li", {}, [detail, controls]);
 }
 
 function formatDifference(value) {
   return value > 0 ? "+" + value : String(value);
+}
+
+function gameCount(played) {
+  return played + (played === 1 ? " game" : " games");
+}
+
+function matchHistory(player, id) {
+  const list = element("ul", { className: "match-history muted", id });
+  for (let index = session.games.length - 1; index >= 0; index--) {
+    const { court, teams, score } = session.games[index];
+    if (score === null) continue;
+    const side = teams.findIndex(team => team.includes(player));
+    if (side === -1) continue;
+    const partner = teams[side].find(id => id !== player);
+    const opponents = names(teams[1 - side]);
+    const difference = score[side] - score[1 - side];
+    const result = difference > 0 ? "Win" : difference < 0 ? "Loss" : "Draw";
+    list.append(element("li", {}, [
+      element("span", { textContent: "M" + (index + 1) + " · Court " + court + " · w/ " + session.players[partner] + " vs " + opponents }),
+      element("span", { className: "mono " + result.toLowerCase(), textContent: score[side] + "–" + score[1 - side], title: result })
+    ]));
+  }
+  if (!list.children.length) list.append(element("li", { textContent: "No completed matches." }));
+  return list;
+}
+
+function renderLeaderboard(rows) {
+  byId("standings").replaceChildren(...rows.map((row, rank) => {
+    const historyId = "match-history-" + row.id;
+    const expanded = expandedPlayer === row.id;
+    const record = row.wins + "W–" + (row.played - row.wins - row.draws) + "L" + (row.draws ? "–" + row.draws + "D" : "");
+    const button = element("button", { type: "button", className: "leaderboard-player", id: "leaderboard-player-" + row.id }, [
+      element("span", { className: "mono muted", textContent: rank + 1 }),
+      element("span", {}, [
+        element("span", { className: "leaderboard-name", textContent: row.name }),
+        element("span", { className: "leaderboard-record muted", textContent: gameCount(row.played) + " played · " + record })
+      ]),
+      element("span", { className: "mono " + (row.difference > 0 ? "win" : row.difference < 0 ? "loss" : "muted"), textContent: formatDifference(row.difference), title: "Point differential" })
+    ]);
+    button.setAttribute("aria-controls", historyId);
+    button.setAttribute("aria-expanded", String(expanded));
+    button.addEventListener("click", () => {
+      expandedPlayer = expanded ? null : row.id;
+      renderLeaderboard(rows);
+      byId(button.id).focus();
+    });
+    const history = expanded ? matchHistory(row.id, historyId) : element("div", { id: historyId, hidden: true });
+    return element("div", {}, [button, history]);
+  }));
 }
 
 function render() {
@@ -1030,16 +1168,22 @@ function render() {
   if (!session) return;
 
   const { active, open, waiting, count } = availability(session);
+  const rows = standings(session);
+  const played = new Map(rows.map(row => [row.id, row.played]));
+  const closed = session.unavailableCourts.length;
   byId("mode").value = session.mode;
   byId("remix").disabled = !count;
-  byId("remix-help").textContent = session.mode === "all" && active.length
+  byId("remix-help").textContent = closed === session.courts ? "Make a court available to remix."
+    : session.mode === "all" && active.length
     ? "Save all in-play scores to remix."
     : count ? count + (count === 1 ? " court ready to remix." : " courts ready to remix.")
     : open.length ? "Four available players are needed for an open court." : "Save a score to open a court.";
-  byId("court-status").textContent = active.length + " in play · " + open.length + " open";
+  const unavailable = session.courts - active.length - open.length;
+  byId("court-status").textContent = active.length + " in play · " + open.length + " open" +
+    (unavailable ? " · " + unavailable + " unavailable" : "");
   byId("bench").replaceChildren(
     element("strong", { textContent: "Waiting (" + waiting.length + ")" }),
-    waiting.length ? " · " + waiting.map(id => session.players[id]).join(", ") : " · Everyone is playing"
+    waiting.length ? " · " + waiting.map(id => session.players[id] + " (" + played.get(id) + ")").join(", ") : ""
   );
 
   const activeByCourt = new Map();
@@ -1055,23 +1199,18 @@ function render() {
 
   const playerCourts = new Map(active.flatMap(game => game.teams.flat().map(id => [id, game.court])));
   byId("player-total").textContent = session.players.length + " players";
+  byId("add-player").hidden = session.players.length >= MAX_PLAYERS;
+  byId("roster-full").hidden = session.players.length < MAX_PLAYERS;
   byId("player-list").replaceChildren(...session.players.map((name, id) =>
-    statusRow(name, playerCourts.has(id) ? "Court " + playerCourts.get(id) : "Waiting")
+    playerRow(id, name, played.get(id), playerCourts.get(id))
   ));
   byId("court-total").textContent = session.courts + (session.courts === 1 ? " doubles court" : " doubles courts");
   byId("court-list").replaceChildren(...Array.from({ length: session.courts }, (_, index) => {
     const court = index + 1;
-    return statusRow("Court " + court, activeByCourt.has(court) ? "In play" : "Open");
+    return courtRow(court, activeByCourt.has(court));
   }));
 
-  const rows = standings(session);
-  byId("standings").replaceChildren(...rows.map(row =>
-    metricRow([row.name, row.played, row.wins, formatDifference(row.difference)])
-  ));
-  rows.sort((a, b) => compareNames(a.name, b.name));
-  byId("stats-rows").replaceChildren(...rows.map(row =>
-    metricRow([row.name, row.played, row.wins, row.draws, row.played - row.wins - row.draws, formatDifference(row.difference)])
-  ));
+  renderLeaderboard(rows);
   const results = document.createDocumentFragment();
   for (const [game, index] of completed.reverse()) {
     const button = element("button", { type: "button", id: "correct-" + index, textContent: "Correct score" });
@@ -1161,9 +1300,32 @@ byId("setup-form").addEventListener("submit", event => {
   }
   const next = makeSession(players, Number(byId("court-count").value));
   next.games = schedule(next);
-  showSection("play");
+  resetSessionView();
   save(next, "Mixer started. The first games are ready.");
   byId("court-title-1").focus();
+});
+
+byId("add-player-form").addEventListener("submit", event => {
+  event.preventDefault();
+  if (!session || session.players.length >= MAX_PLAYERS) return;
+  const input = byId("new-player");
+  const taken = new Set(session.players.map(name => name.toLowerCase()));
+  let name = input.value.trim();
+  if (!name) {
+    let number = 1;
+    while (taken.has("player " + number)) number++;
+    name = "Player " + number;
+  }
+  if (name.length > MAX_NAME || taken.has(name.toLowerCase())) {
+    showNotice("Enter a distinct player name of at most " + MAX_NAME + " characters.", true);
+    input.focus();
+    return;
+  }
+  const id = session.players.length;
+  input.value = "";
+  save({ ...session, players: [...session.players, name] }, name + " added and available for the next mix.");
+  if (session.players.length === MAX_PLAYERS) byId("player-availability-" + id).focus();
+  else input.focus();
 });
 
 byId("mode").addEventListener("change", event => {
@@ -1179,7 +1341,7 @@ byId("remix").addEventListener("click", () => {
 byId("new").addEventListener("click", () => {
   if (!window.confirm("Clear this session and its results? Back up JSON first if you want to keep it.")) return;
   save(null, "Session cleared.");
-  drafts.clear();
+  resetSessionView();
   byId("setup-form").reset();
   syncRosterFields();
   playerCount.focus();
@@ -1213,8 +1375,7 @@ byId("backup-file").addEventListener("change", async event => {
     return;
   }
   if (session && !window.confirm("Replace this session and its results with the JSON backup?")) return;
-  drafts.clear();
-  showSection("play");
+  resetSessionView();
   save(restored, "Session restored from JSON.");
   byId("court-title-1").focus();
 });

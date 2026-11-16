@@ -23,3 +23,13 @@ The Offline Mixer uses the Classic dark palette, original PaddlePot logo, and In
 Choose **Number of players** to create Player 1, Player 2, and so on. Type a count from 4 to 200 or use the **−** and **+** buttons. Choose **Enter player names** to paste or type one distinct name per line.
 
 The session uses the Classic swipeable navigation on phones. **Play** has scores and remix controls, **Players** shows the roster and who is waiting, **Leaderboard** ranks players, **Stats** shows alphabetical totals, **Courts** shows court availability, and **Results** contains score corrections. Find JSON backup, restore, and New session under **Settings**. You can also restore a backup from setup. v1.0.0 JSON backups still work.
+
+## v1.2.0 · Availability and player match history
+
+Use the switches in **Players** to take players out of the next mix or make them available again. Use **+ Add player** to enter a name or leave it blank for the next unused player number. New players are available for the next mix. **Players** shows completed games under each name, and **Play** shows that count in brackets for waiting players.
+
+In **Courts**, choose **D** to open a court for doubles or **U** to make it unavailable. Players and courts marked unavailable can finish and score games already in play. The **Mode** card controls remix timing.
+
+Tap a name in **Leaderboard** to see all of that player's completed matches with partners, opponents, courts and scores. The leaderboard also shows games played and each player's win, loss and draw record. This replaces the separate Stats tab.
+
+Player and court availability is saved locally and included in JSON backups. Earlier backups restore with all players and courts available.
