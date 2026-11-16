@@ -106,7 +106,7 @@
   .player-count-control input { min-width: 0; flex: 1; text-align: center; appearance: textfield; }
   .player-count-control input::-webkit-inner-spin-button, .player-count-control input::-webkit-outer-spin-button { appearance: none; margin: 0; }
   .player-count-control button { flex: 0 0 48px; font-size: 16px; }
-  select, input:not([type="radio"]), textarea { padding: 8px 10px; background: var(--ink-raised); font-size: 16px; }
+  select, input:not([type="radio"], [type="checkbox"]), textarea { padding: 8px 10px; background: var(--ink-raised); font-size: 16px; }
   textarea { width: 100%; min-height: 9rem; resize: vertical; }
   .notice { padding: 10px 12px; background: var(--court-teal); border: 1px solid var(--court-teal-light); border-radius: var(--radius-sm); margin-bottom: 12px; overflow-wrap: anywhere; }
   .notice.error { background: var(--ink-card); border-color: var(--coral); color: var(--coral); }
@@ -128,6 +128,7 @@
   .bench { margin: 10px 0; overflow-wrap: anywhere; }
   .bench small { margin-left: 6px; }
   .waiting-names { display: block; margin-top: 3px; }
+  .bench p + p { margin-top: 8px; }
   .leaderboard-list { display: grid; gap: 6px; margin-top: 10px; }
   .leaderboard-player {
     display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center;
@@ -161,6 +162,9 @@
   .add-player form { display: grid; gap: 8px; margin-bottom: 10px; }
   .add-player input { width: 100%; }
   .settings-help { margin-top: 14px; }
+  .rack-setting { margin-bottom: 14px; }
+  .rack-setting label { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+  .rack-setting input { width: 18px; height: 18px; margin: 0; accent-color: var(--ball); }
   .settings-help a { color: var(--ball); text-underline-offset: 2px; }
   .version { display: block; margin-top: 12px; color: var(--text-dim); }
   .danger { color: var(--coral); }
@@ -668,7 +672,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <button type="button" class="primary" id="remix" aria-describedby="remix-help">Remix courts</button>
         </div>
       </div>
-      <p class="bench" id="bench"></p>
+      <div class="bench" id="bench"></div>
       <div class="cards" id="cards"></div>
       <button type="button" class="primary save-all" id="save-all-courts" disabled hidden>Save all courts</button>
     </section>
@@ -703,13 +707,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     </section>
     <section class="panel" id="settings" aria-labelledby="settings-title" hidden>
       <div class="section-head"><h2 id="settings-title">Settings</h2></div>
+      <div class="rack-setting">
+        <label><input type="checkbox" id="split-racks" aria-describedby="rack-help"> Winner and loser racks</label>
+        <p class="muted" id="rack-help">Remix four players from the same rack when possible. If no rack has four players, mix across racks.</p>
+      </div>
       <div class="actions">
         <button id="export" type="button">Back up JSON</button>
         <button id="import" type="button">Restore JSON</button>
         <button id="new" class="danger" type="button">New session</button>
       </div>
       <p class="settings-help"><a href="https://github.com/snapcrab/paddlepot-offline" target="_blank" rel="noopener noreferrer">GitHub repository</a> · Find the user guide in the README.</p>
-      <small class="version">PaddlePot Offline v1.2.1</small>
+      <small class="version">PaddlePot Offline v1.3.0</small>
     </section>
   </div>
 </main>
@@ -740,6 +748,7 @@ const TEAM_SPLITS = [
   [[0, 2], [1, 3]],
   [[0, 3], [1, 2]]
 ];
+const RACK_LABELS = ["Winner rack", "Loser rack", "Open rack"];
 
 function isInteger(value, min, max) {
   return Number.isInteger(value) && value >= min && value <= max;
@@ -759,7 +768,7 @@ function validScore(score) {
 
 function makeSession(players, courts) {
   return {
-    format: FORMAT, version: BACKUP_VERSION, players, courts, mode: "open", games: [],
+    format: FORMAT, version: BACKUP_VERSION, players, courts, mode: "open", splitRacks: false, games: [],
     unavailablePlayers: [], unavailableCourts: [], waitingSince: players.map(() => 0)
   };
 }
@@ -809,7 +818,8 @@ function readBackup(raw) {
     throw new Error("Choose a PaddlePot Offline v1 backup.");
   }
   if (!validRoster(data.players) || !isInteger(data.courts, 1, MAX_COURTS) ||
-      !["open", "all"].includes(data.mode) || !Array.isArray(data.games)) {
+      !["open", "all"].includes(data.mode) || !Array.isArray(data.games) ||
+      (data.splitRacks !== undefined && typeof data.splitRacks !== "boolean")) {
     throw new Error("The backup has invalid session settings.");
   }
   const games = [];
@@ -848,7 +858,7 @@ function readBackup(raw) {
     games.push({ mix: game.mix, court: game.court, teams: game.teams, score: game.score });
   }
   return {
-    ...makeSession(data.players, data.courts), mode: data.mode, games,
+    ...makeSession(data.players, data.courts), mode: data.mode, splitRacks: data.splitRacks ?? false, games,
     unavailablePlayers: readAvailability(data.unavailablePlayers, 0, data.players.length - 1),
     unavailableCourts: readAvailability(data.unavailableCourts, 1, data.courts),
     waitingSince: readWaitingOrder(data.waitingSince, data.players.length, games)
@@ -866,6 +876,39 @@ function availability(session) {
     .sort((a, b) => session.waitingSince[a] - session.waitingSince[b] || a - b);
   const count = session.mode === "all" && active.length ? 0 : Math.min(open.length, Math.floor(waiting.length / 4));
   return { active, open, waiting, count };
+}
+
+function waitingRacks(session, waiting) {
+  const rackByPlayer = new Map();
+  for (const { teams, score } of session.games) {
+    if (score === null) continue;
+    teams.forEach((team, side) => {
+      const difference = score[side] - score[1 - side];
+      const rack = difference === 0 ? 2 : Number(difference < 0);
+      for (const id of team) rackByPlayer.set(id, rack);
+    });
+  }
+  const racks = RACK_LABELS.map(() => []);
+  for (const id of waiting) racks[rackByPlayer.get(id) ?? 2].push(id);
+  return racks;
+}
+
+function remixPools(session, waiting, count) {
+  if (!session.splitRacks) return [waiting.slice(0, count * 4)];
+
+  const position = new Map(waiting.map((id, index) => [id, index]));
+  const racks = waitingRacks(session, waiting);
+  const pools = racks.map(() => []);
+  let slots = count;
+  while (slots > 0) {
+    const nextRack = racks.filter(rack => rack.length >= 4)
+      .sort((a, b) => position.get(a[0]) - position.get(b[0]))[0];
+    if (!nextRack) break;
+    pools[racks.indexOf(nextRack)].push(...nextRack.splice(0, 4));
+    slots--;
+  }
+  const leftovers = racks.flat().sort((a, b) => position.get(a) - position.get(b));
+  return [...pools, leftovers.slice(0, slots * 4)].filter(pool => pool.length);
 }
 
 function pairKey(a, b, size) {
@@ -929,13 +972,13 @@ function schedule(session, random = Math.random) {
   if (!count) return [];
   const mix = (session.games.at(-1)?.mix ?? 0) + 1;
   const history = schedulingHistory(session);
-  const eligible = waiting.slice(0, count * 4);
+  const pools = remixPools(session, waiting, count);
 
   let best;
   let bestCost = Infinity;
   for (let attempt = 0; attempt < 160; attempt++) {
-    // Lineup search changes pairings among the players next in the queue.
-    const lineup = shuffle(eligible, random);
+    // Shuffle within each pool so complete racks stay together.
+    const lineup = pools.flatMap(pool => shuffle(pool, random));
     const pairings = open.slice(0, count).map((court, index) => {
       const group = lineup.slice(index * 4, index * 4 + 4);
       return { court, ...bestTeams(group, history, mix) };
@@ -1264,6 +1307,19 @@ function renderLeaderboard(rows) {
   }));
 }
 
+function waitingLine(label, waiting, played, hint) {
+  return element("p", {}, [
+    element("strong", { textContent: label + " (" + waiting.length + ")" }),
+    ...(waiting.length ? [
+      ...(hint ? [element("small", { className: "muted", textContent: hint })] : []),
+      element("span", {
+        className: "waiting-names",
+        textContent: waiting.map(id => session.players[id] + " (" + played.get(id) + ")").join(", ")
+      })
+    ] : [])
+  ]);
+}
+
 function render() {
   byId("setup").hidden = Boolean(session);
   byId("session").hidden = !session;
@@ -1276,6 +1332,7 @@ function render() {
   const played = new Map(rows.map(row => [row.id, row.played]));
   const closed = session.unavailableCourts.length;
   byId("mode").value = session.mode;
+  byId("split-racks").checked = session.splitRacks;
   byId("remix").disabled = !count;
   byId("remix-help").textContent = closed === session.courts ? "Make a court available to remix."
     : session.mode === "all" && active.length
@@ -1285,16 +1342,10 @@ function render() {
   const unavailable = session.courts - active.length - open.length;
   byId("court-status").textContent = active.length + " in play · " + open.length + " open" +
     (unavailable ? " · " + unavailable + " unavailable" : "");
-  byId("bench").replaceChildren(
-    element("strong", { textContent: "Waiting queue (" + waiting.length + ")" }),
-    ...(waiting.length ? [
-      element("small", { className: "muted", textContent: "Longest wait first" }),
-      element("span", {
-        className: "waiting-names",
-        textContent: waiting.map(id => session.players[id] + " (" + played.get(id) + ")").join(", ")
-      })
-    ] : [])
-  );
+  const racks = session.splitRacks
+    ? waitingRacks(session, waiting).map((rack, index) => waitingLine(RACK_LABELS[index], rack, played))
+    : [waitingLine("Waiting queue", waiting, played, "Longest wait first")];
+  byId("bench").replaceChildren(...racks);
 
   const latestByCourt = new Map();
   const completed = [];
@@ -1451,6 +1502,9 @@ byId("add-player-form").addEventListener("submit", event => {
 
 byId("mode").addEventListener("change", event => {
   save({ ...session, mode: event.currentTarget.value }, "Remix timing saved.");
+});
+byId("split-racks").addEventListener("change", event => {
+  save({ ...session, splitRacks: event.currentTarget.checked }, "Rack setting saved.");
 });
 byId("remix").addEventListener("click", () => {
   const games = schedule(session);
