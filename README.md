@@ -40,3 +40,7 @@ Player and court availability is saved locally and included in JSON backups. Ear
 - [Download the ZIP](https://github.com/snapcrab/paddlepot-offline/releases/latest/download/paddlepot-offline.zip) if your phone adds a .txt extension. The ZIP contains one file, paddlepot-offline.html.
 
 On iPhone, tap the ZIP in Files to unpack it. On Android, open the ZIP in Files by Google and tap **Extract**. Open the extracted HTML in a browser that can run local HTML files. Before relying on it courtside, try starting a Mixer and saving a score in airplane mode.
+
+## Open PaddlePot in a browser
+
+[Open PaddlePot Offline on GitHub Pages](https://snapcrab.github.io/paddlepot-offline/paddlepot-offline.html) to use the Mixer without downloading a file. This is the link to share on Facebook. The hosted page opens over the internet and saves the session in the current browser. Use JSON backup and restore to move a session between the hosted page and the downloaded file.
