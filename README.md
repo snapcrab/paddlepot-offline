@@ -15,3 +15,11 @@ The Mixer gives available players with fewer assignments first opportunity to pl
 The session saves in the current browser profile. Reopen the same HTML file from the same location to resume. Browsers can handle local-file storage differently, so use a JSON backup to move between file locations, browsers or devices.
 
 Any decision to replace free public session creation on paddlepot.app belongs to a later rollout.
+
+## v1.1.0 · Classic PaddlePot theme and player entry
+
+The Offline Mixer uses the Classic dark palette, original PaddlePot logo, and Inter, Space Grotesk, and JetBrains Mono. The logo and fonts are embedded in the HTML.
+
+Choose **Number of players** to create Player 1, Player 2, and so on. Type a count from 4 to 200 or use the **−** and **+** buttons. Choose **Enter player names** to paste or type one distinct name per line.
+
+The session uses the Classic swipeable navigation on phones. **Play** has scores and remix controls, **Players** shows the roster and who is waiting, **Leaderboard** ranks players, **Stats** shows alphabetical totals, **Courts** shows court availability, and **Results** contains score corrections. Find JSON backup, restore, and New session under **Settings**. You can also restore a backup from setup. v1.0.0 JSON backups still work.
