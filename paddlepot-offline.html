@@ -157,6 +157,7 @@
   .circle-choice[aria-pressed="true"] { background: var(--ball); border-color: var(--ball); color: var(--on-ball); }
   .circle-choice.danger[aria-pressed="true"] { background: var(--coral); border-color: var(--coral); color: #351009; }
   .availability-help { margin-bottom: 10px; }
+  .court-list-actions { margin-bottom: 10px; }
   .add-player { margin: 0 0 12px; }
   .add-player summary { color: var(--ball); cursor: pointer; min-height: 44px; align-content: center; font-weight: 600; }
   .add-player form { display: grid; gap: 8px; margin-bottom: 10px; }
@@ -699,6 +700,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <section class="panel" id="courts" aria-labelledby="courts-title" hidden>
       <div class="section-head"><h2 id="courts-title">Courts</h2><span id="court-total" class="muted"></span></div>
       <p class="muted availability-help">D = Doubles · U = Unavailable. Games already in play can finish.</p>
+      <div class="actions court-list-actions">
+        <button id="add-court" type="button">Add court</button>
+        <p class="muted" id="court-limit" hidden></p>
+      </div>
       <ul class="status-list" id="court-list"></ul>
     </section>
     <section class="panel" id="history" aria-labelledby="history-title" hidden>
@@ -717,7 +722,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button id="new" class="danger" type="button">New session</button>
       </div>
       <p class="settings-help"><a href="https://github.com/snapcrab/paddlepot-offline" target="_blank" rel="noopener noreferrer">GitHub repository</a> · Find the user guide in the README.</p>
-      <small class="version">PaddlePot Offline v1.3.0</small>
+      <small class="version">PaddlePot Offline v1.4.0</small>
     </section>
   </div>
 </main>
@@ -1368,6 +1373,8 @@ function render() {
     playerRow(id, name, played.get(id), playerCourts.get(id))
   ));
   byId("court-total").textContent = session.courts + (session.courts === 1 ? " doubles court" : " doubles courts");
+  byId("add-court").disabled = session.courts >= MAX_COURTS;
+  byId("court-limit").hidden = session.courts < MAX_COURTS;
   byId("court-list").replaceChildren(...Array.from({ length: session.courts }, (_, index) => {
     const court = index + 1;
     return courtRow(court, latestByCourt.get(court)?.[0].score === null);
@@ -1420,6 +1427,7 @@ byId("save-all-courts").addEventListener("click", () => {
 byId("court-count").append(...Array.from({ length: MAX_COURTS }, (_, index) =>
   element("option", { value: index + 1, textContent: index + 1 })
 ));
+byId("court-limit").textContent = "Maximum of " + MAX_COURTS + " courts reached.";
 
 function syncCountButtons() {
   const count = playerCount.valueAsNumber;
@@ -1498,6 +1506,13 @@ byId("add-player-form").addEventListener("submit", event => {
     name + " added and available for the next mix.");
   if (session.players.length === MAX_PLAYERS) byId("player-availability-" + id).focus();
   else input.focus();
+});
+
+byId("add-court").addEventListener("click", () => {
+  if (!session || session.courts >= MAX_COURTS) return;
+  const court = session.courts + 1;
+  save({ ...session, courts: court }, "Court " + court + " added and available for the next mix.");
+  if (court === MAX_COURTS) byId("court-" + court + "-D").focus();
 });
 
 byId("mode").addEventListener("change", event => {
