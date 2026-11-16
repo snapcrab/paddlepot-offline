@@ -163,7 +163,7 @@
   .add-player form { display: grid; gap: 8px; margin-bottom: 10px; }
   .add-player input { width: 100%; }
   .settings-help { margin-top: 14px; }
-  .rack-setting { margin-bottom: 14px; }
+  #settings .rack-setting { margin-bottom: 14px; }
   .rack-setting label { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
   .rack-setting input { width: 18px; height: 18px; margin: 0; accent-color: var(--ball); }
   .settings-help a { color: var(--ball); text-underline-offset: 2px; }
@@ -629,7 +629,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <p class="notice" id="notice" role="status" hidden></p>
   <input id="backup-file" type="file" accept=".json,application/json" hidden>
   <section class="panel setup" id="setup" aria-labelledby="setup-title">
-    <h2 id="setup-title">Set up your doubles Mixer</h2>
+    <h2 id="setup-title">Set up your doubles mixer</h2>
     <form id="setup-form">
       <fieldset class="player-entry-options">
         <legend>Add players by</legend>
@@ -650,9 +650,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <textarea id="roster" required disabled aria-describedby="roster-help" placeholder="Alex&#10;Bailey&#10;Casey&#10;Drew"></textarea>
         <p id="roster-help" class="muted">Enter one distinct name per line. Add at least four players.</p>
       </div>
+      <div class="rack-setting">
+        <label><input type="checkbox" id="setup-split-racks" aria-describedby="setup-rack-help"> Winner and loser racks</label>
+        <p class="muted" id="setup-rack-help">Group players by their latest result when remixing.</p>
+      </div>
       <div class="footer">
         <label for="court-count">Courts <select id="court-count"></select></label>
-        <button type="submit" class="primary">Start Mixer</button>
+        <button type="submit" class="primary">Start mixer</button>
       </div>
     </form>
     <button type="button" class="restore" id="restore-setup">Restore JSON</button>
@@ -722,7 +726,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button id="new" class="danger" type="button">New session</button>
       </div>
       <p class="settings-help"><a href="https://github.com/snapcrab/paddlepot-offline" target="_blank" rel="noopener noreferrer">GitHub repository</a> · Find the user guide in the README.</p>
-      <small class="version">PaddlePot Offline v1.4.2</small>
+      <small class="version">PaddlePot Offline v1.4.3</small>
     </section>
   </div>
 </main>
@@ -1487,6 +1491,7 @@ byId("setup-form").addEventListener("submit", event => {
     return;
   }
   const next = makeSession(players, Number(byId("court-count").value));
+  next.splitRacks = byId("setup-split-racks").checked;
   next.waitingSince = shuffle(next.waitingSince.map((_, id) => id), Math.random);
   next.games = schedule(next);
   resetSessionView();

@@ -13,3 +13,4 @@ A doubles pickleball Mixer you can run in your browser.
 - **v1.4.0** Add courts during play from the Courts tab.
 - **v1.4.1** Saved scores show green for wins, red for losses, and grey for draws.
 - **v1.4.2** Open rack players can join Winner or Loser games with the same wait-time priority.
+- **v1.4.3** Choose Winner and Loser racks when setting up a new session.
