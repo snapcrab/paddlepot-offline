@@ -32,3 +32,5 @@ Scores and session data stay in the browser. The hosted page and a local copy ma
 The [MIT licence](./LICENSE) covers the original Mixer code. It allows use, adaptation and sharing, including commercial use, as long as the licence and copyright notice are kept with copies or substantial portions of the code. The PaddlePot name and logo and the PDF guide are outside that grant. The embedded Inter, JetBrains Mono and Space Grotesk fonts are under the SIL Open Font License 1.1; their notices are in the HTML.
 
 See [Contributing](./CONTRIBUTING.md) to report a bug, share an idea or help improve the Mixer.
+
+Click the PaddlePot logo or name in the Mixer header to go to the [PaddlePot homepage](https://paddlepot.app/).
