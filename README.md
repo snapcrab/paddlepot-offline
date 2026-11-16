@@ -16,3 +16,7 @@ Turn on **Winner and loser racks** in **Settings** to split the waiting queue on
 ## v1.4.0
 
 During a session, select **Courts → Add court** to open the next numbered doubles court, up to 24 courts. The new court appears on **Play** and can be assigned by **Remix courts** when your remix timing allows it and four players are available. Added courts are included in local saves and JSON backups.
+
+## v1.4.1
+
+Saved scores on **Play** use green for the winner, red for the loser, and a muted colour for draws. **Modify score** updates the colours when you save a correction.

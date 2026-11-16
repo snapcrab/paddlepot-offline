@@ -722,7 +722,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button id="new" class="danger" type="button">New session</button>
       </div>
       <p class="settings-help"><a href="https://github.com/snapcrab/paddlepot-offline" target="_blank" rel="noopener noreferrer">GitHub repository</a> · Find the user guide in the README.</p>
-      <small class="version">PaddlePot Offline v1.4.0</small>
+      <small class="version">PaddlePot Offline v1.4.1</small>
     </section>
   </div>
 </main>
@@ -1173,7 +1173,7 @@ function courtCard(court, game, index) {
         names(team)
       ]),
       element("strong", {
-        className: "mono saved-points",
+        className: "mono saved-points " + outcomeColour(game.score[side] - game.score[1 - side]),
         textContent: game.score[side]
       })
     ]));
