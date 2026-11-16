@@ -33,3 +33,10 @@ In **Courts**, choose **D** to open a court for doubles or **U** to make it unav
 Tap a name in **Leaderboard** to see all of that player's completed matches with partners, opponents, courts and scores. The leaderboard also shows games played and each player's win, loss and draw record. This replaces the separate Stats tab.
 
 Player and court availability is saved locally and included in JSON backups. Earlier backups restore with all players and courts available.
+
+## Download PaddlePot Offline
+
+- [Download the standalone HTML](https://github.com/snapcrab/paddlepot-offline/releases/latest/download/paddlepot-offline.html).
+- [Download the ZIP](https://github.com/snapcrab/paddlepot-offline/releases/latest/download/paddlepot-offline.zip) if your phone adds a .txt extension. The ZIP contains one file, paddlepot-offline.html.
+
+On iPhone, tap the ZIP in Files to unpack it. On Android, open the ZIP in Files by Google and tap **Extract**. Open the extracted HTML in a browser that can run local HTML files. Before relying on it courtside, try starting a Mixer and saving a score in airplane mode.
