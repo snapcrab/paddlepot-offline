@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Run a continuous doubles pickleball Mixer offline.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
+<title>PaddlePot Offline · Mixer</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #19271e;
+    --muted: #55645a;
+    --paper: #f4f6ef;
+    --line: #d9e1d6;
+    --sidebar: #17291f;
+    --accent: #d8f481;
+    --green: #245238;
+    --danger: #952f2a;
+    font: 100%/1.5 "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); }
+  button, input, select, textarea { font: inherit; color: inherit; border: 1px solid var(--line); border-radius: 9px; }
+  button, select { min-height: 42px; }
+  button { padding: .55rem .9rem; background: white; font-weight: 650; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--green); }
+  button:disabled { opacity: .55; cursor: default; }
+  :focus-visible { outline: 3px solid #438256; outline-offset: 3px; }
+  [hidden] { display: none !important; }
+  .shell { min-height: 100vh; display: grid; grid-template-columns: 206px minmax(0, 1fr); }
+  .sidebar { display: flex; flex-direction: column; gap: 2.3rem; padding: 1.6rem 1.2rem; background: var(--sidebar); color: #f6fbf0; }
+  .brand { display: flex; align-items: center; gap: .7rem; font-size: 1.12rem; font-weight: 750; letter-spacing: -.035em; }
+  .mark { display: grid; place-items: center; width: 36px; height: 36px; color: var(--sidebar); background: var(--accent); border-radius: 10px; font-size: 1.35rem; }
+  .brand small { display: block; font-size: .68rem; color: #c4d5c9; letter-spacing: .14em; text-transform: uppercase; }
+  nav { display: grid; gap: .35rem; }
+  nav a { padding: .6rem .85rem; color: #e1ede2; text-decoration: none; border-radius: 8px; font-size: .9rem; }
+  nav a:hover, nav a:focus-visible { background: #304a39; }
+  .backup { display: grid; gap: .55rem; }
+  .backup button { text-align: left; background: #21372a; color: #f6fbf0; border-color: #4d6454; }
+  .backup button:hover:not(:disabled) { border-color: var(--accent); }
+  .version { margin-top: auto; font-size: .78rem; color: #bdcfc1; }
+  main { width: 100%; min-width: 0; max-width: 1450px; margin-inline: auto; padding: clamp(1rem, 4vw, 3rem); }
+  header.page { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.2rem; }
+  h1, h2, h3, p { margin: 0; }
+  h1 { font-size: clamp(2.3rem, 5vw, 4rem); letter-spacing: -.075em; line-height: 1.04; }
+  h2 { font-size: 1.3rem; letter-spacing: -.035em; }
+  h3 { font-size: 1rem; }
+  .muted { color: var(--muted); }
+  .page p { margin-top: .45rem; }
+  .storage { border: 1px solid var(--line); padding: .35rem .65rem; border-radius: 999px; font-size: .78rem; font-weight: 650; }
+  .storage[data-error="true"] { border-color: var(--danger); color: var(--danger); }
+  .storage[data-error="false"]::before { content: ""; display: inline-block; margin-right: .4rem; width: 7px; height: 7px; border-radius: 50%; background: #458453; }
+  .primary { background: var(--accent); border-color: #bbd967; }
+  .primary:hover:not(:disabled) { background: #e5faab; }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 15px; padding: clamp(.85rem, 2.2vw, 1.4rem); }
+  .setup { max-width: 740px; }
+  .setup form { display: grid; gap: .9rem; margin-top: 1rem; }
+  .setup .footer { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: .85rem; }
+  label { font-size: .86rem; font-weight: 650; }
+  select, input, textarea { padding: .48rem .6rem; background: #f9faf6; }
+  textarea { width: 100%; min-height: 11rem; display: block; margin-top: .35rem; resize: vertical; }
+  .hint { font-size: .84rem; }
+  .notice { padding: .65rem .85rem; background: #e8efdf; border-radius: 8px; margin-bottom: 1rem; overflow-wrap: anywhere; }
+  .notice.error { background: #fceae7; color: var(--danger); }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: .8rem 1.2rem; flex-wrap: wrap; margin-bottom: 1.1rem; background: #e8efdf; }
+  .actions { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; }
+  .session-meta strong { display: block; }
+  .dashboard { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(275px, 1fr); gap: 1rem; align-items: start; }
+  .section-head { display: flex; flex-wrap: wrap; gap: .2rem .8rem; align-items: baseline; justify-content: space-between; margin-bottom: .9rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr)); gap: .75rem; }
+  .court { background: #f8faf5; border: 1px solid var(--line); border-radius: 11px; padding: .85rem; }
+  .court header { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; margin-bottom: .55rem; }
+  .tag { font-size: .72rem; color: var(--green); font-weight: 700; }
+  .teams { display: grid; gap: .45rem; }
+  .team { display: grid; grid-template-columns: minmax(0, 1fr) 4.2rem; align-items: center; gap: .5rem; padding: .5rem; background: white; border-radius: 7px; }
+  .team label { overflow-wrap: anywhere; }
+  .team small { display: block; color: var(--muted); }
+  .team input { width: 100%; }
+  .teams button { margin-top: .15rem; width: 100%; }
+  .bench { margin-top: .9rem; overflow-wrap: anywhere; }
+  .leaderboard { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  caption { caption-side: bottom; text-align: left; font-size: .78rem; color: var(--muted); padding-top: .7rem; }
+  th, td { padding: .48rem .35rem; text-align: right; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; overflow-wrap: anywhere; }
+  tbody tr:nth-child(odd) { background: #f8faf5; }
+  .history { grid-column: 1 / -1; }
+  .result { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .25rem .8rem; align-items: center; border-top: 1px solid var(--line); padding: .7rem 0; overflow-wrap: anywhere; }
+  .result:last-child { padding-bottom: 0; }
+  .result button { font-size: .84rem; }
+  .result strong { font-variant-numeric: tabular-nums; }
+  dialog { width: min(450px, calc(100% - 2rem)); border: 1px solid var(--line); border-radius: 15px; color: var(--ink); padding: 1.3rem; }
+  dialog::backdrop { background: #162b21a8; }
+  dialog .teams { margin: .8rem 0; }
+  dialog .actions { justify-content: flex-end; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @media (max-width: 980px) { .dashboard { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 720px) {
+    .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+    .sidebar { gap: .55rem 1rem; padding: .8rem 1rem; flex-direction: row; align-items: center; flex-wrap: wrap; }
+    nav { display: flex; flex-wrap: wrap; gap: 0; }
+    nav a { padding: .4rem .45rem; }
+    .backup { display: flex; align-items: center; flex-wrap: wrap; }
+    .backup button { font-size: .78rem; }
+    .version { margin: 0; }
+  }
+  @media (max-width: 400px) {
+    header.page { flex-direction: column; gap: .55rem; }
+    .toolbar .actions :is(select, button) { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="mark" aria-hidden="true">P</span><div>PaddlePot<small>Offline</small></div></div>
+    <nav id="session-nav" aria-label="Session" hidden>
+      <a href="#courts">Courts</a><a href="#leaderboard">Leaderboard</a><a href="#history">Results</a>
+    </nav>
+    <div class="backup">
+      <button id="export" type="button" disabled>Back up JSON</button>
+      <button id="import" type="button">Restore JSON</button>
+      <input id="backup-file" type="file" accept=".json,application/json" hidden>
+    </div>
+    <span class="version">v1.0.0</span>
+  </aside>
+  <main>
+    <header class="page">
+      <div><h1>Doubles Mixer</h1><p class="muted">Run continuous doubles and track every result.</p></div>
+      <span class="storage" id="storage" data-error="false">Ready offline</span>
+    </header>
+    <p class="notice" id="notice" role="status" hidden></p>
+    <section class="panel setup" id="setup" aria-labelledby="setup-title">
+      <h2 id="setup-title">Set up your session</h2>
+      <form id="setup-form">
+        <label for="roster">Players
+          <textarea id="roster" required aria-describedby="roster-help" placeholder="Alex&#10;Bailey&#10;Casey&#10;Drew"></textarea>
+        </label>
+        <p id="roster-help" class="hint muted">Enter one distinct name per line. Add at least four players.</p>
+        <div class="footer">
+          <label for="court-count">Courts <select id="court-count"></select></label>
+          <button type="submit" class="primary">Start Mixer</button>
+        </div>
+      </form>
+    </section>
+    <div id="session" hidden>
+      <section class="toolbar panel" aria-label="Session controls">
+        <div class="session-meta">
+          <strong id="summary"></strong>
+          <span id="remix-help" class="hint muted"></span>
+        </div>
+        <div class="actions">
+          <label for="mode" class="sr-only">Remix timing</label>
+          <select id="mode">
+            <option value="open">Use open courts</option>
+            <option value="all">Wait for all courts</option>
+          </select>
+          <button type="button" class="primary" id="remix" aria-describedby="remix-help">Remix courts</button>
+          <button type="button" id="new">New session</button>
+        </div>
+      </section>
+      <div class="dashboard">
+        <section class="panel" id="courts" aria-labelledby="courts-title">
+          <div class="section-head"><h2 id="courts-title">Courts</h2><span id="court-status" class="hint muted"></span></div>
+          <div class="cards" id="cards"></div>
+          <p class="bench hint" id="bench"></p>
+        </section>
+        <section class="panel leaderboard" id="leaderboard" aria-labelledby="leaderboard-title">
+          <div class="section-head"><h2 id="leaderboard-title">Leaderboard</h2></div>
+          <table>
+            <caption>Ranked by wins, then point differential. GP = games played.</caption>
+            <thead><tr><th scope="col">Player</th><th scope="col"><abbr title="Games played">GP</abbr></th><th scope="col">Wins</th><th scope="col"><abbr title="Point differential">+/−</abbr></th></tr></thead>
+            <tbody id="standings"></tbody>
+          </table>
+        </section>
+        <section class="panel history" id="history" aria-labelledby="history-title">
+          <div class="section-head"><h2 id="history-title">Results</h2></div>
+          <div id="results"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+<dialog id="correction" aria-labelledby="correction-title">
+  <h2 id="correction-title">Correct score</h2>
+  <p class="muted hint" id="correction-detail"></p>
+  <form id="correction-form">
+    <div id="correction-fields" class="teams"></div>
+    <div class="actions">
+      <button type="button" id="cancel-correction">Cancel</button>
+      <button type="submit" class="primary">Save correction</button>
+    </div>
+  </form>
+</dialog>
+<script>
+"use strict";
+const STORAGE_KEY = "paddlepot-offline.session.v1";
+const FORMAT = "paddlepot-offline";
+const BACKUP_VERSION = 1;
+const MAX_COURTS = 24;
+const MAX_PLAYERS = 200;
+const MAX_NAME = 80;
+const MAX_SCORE = 999;
+const TEAM_SPLITS = [
+  [[0, 1], [2, 3]],
+  [[0, 2], [1, 3]],
+  [[0, 3], [1, 2]]
+];
+
+function isInteger(value, min, max) {
+  return Number.isInteger(value) && value >= min && value <= max;
+}
+
+function validRoster(players) {
+  return Array.isArray(players) && isInteger(players.length, 4, MAX_PLAYERS) &&
+    players.every(name => typeof name === "string" && name === name.trim() &&
+      isInteger(name.length, 1, MAX_NAME) && !/[\r\n]/.test(name)) &&
+    new Set(players.map(name => name.toLowerCase())).size === players.length;
+}
+
+function validScore(score) {
+  return Array.isArray(score) && score.length === 2 &&
+    score.every(value => isInteger(value, 0, MAX_SCORE));
+}
+
+function makeSession(players, courts) {
+  return { format: FORMAT, version: BACKUP_VERSION, players, courts, mode: "open", games: [] };
+}
+
+function readBackup(raw) {
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error("This file is not valid JSON.");
+  }
+  if (data?.format !== FORMAT || data.version !== BACKUP_VERSION) {
+    throw new Error("Choose a PaddlePot Offline v1 backup.");
+  }
+  if (!validRoster(data.players) || !isInteger(data.courts, 1, MAX_COURTS) ||
+      !["open", "all"].includes(data.mode) || !Array.isArray(data.games)) {
+    throw new Error("The backup has invalid session settings.");
+  }
+  const games = [];
+  const activePlayers = new Set();
+  const activeCourts = new Set();
+  let previousMix = 0;
+  const mixPlayers = new Set();
+  const mixCourts = new Set();
+  for (const game of data.games) {
+    if (!game || !isInteger(game.mix, Math.max(1, previousMix), previousMix + 1) ||
+        !isInteger(game.court, 1, data.courts) ||
+        !Array.isArray(game.teams) || game.teams.length !== 2 ||
+        !game.teams.every(team => Array.isArray(team) && team.length === 2) ||
+        (game.score !== null && !validScore(game.score))) {
+      throw new Error("The backup contains an invalid game.");
+    }
+    const players = game.teams.flat();
+    if (new Set(players).size !== 4 || !players.every(id => isInteger(id, 0, data.players.length - 1))) {
+      throw new Error("The backup contains an invalid court assignment.");
+    }
+    if (previousMix !== game.mix) {
+      mixPlayers.clear();
+      mixCourts.clear();
+      previousMix = game.mix;
+    }
+    if (mixCourts.has(game.court) || players.some(id => mixPlayers.has(id)) ||
+        activeCourts.has(game.court) || players.some(id => activePlayers.has(id))) {
+      throw new Error("The backup assigns a court or player to overlapping games.");
+    }
+    mixCourts.add(game.court);
+    players.forEach(id => mixPlayers.add(id));
+    if (game.score === null) {
+      activeCourts.add(game.court);
+      players.forEach(id => activePlayers.add(id));
+    }
+    games.push({ mix: game.mix, court: game.court, teams: game.teams, score: game.score });
+  }
+  return { ...makeSession(data.players, data.courts), mode: data.mode, games };
+}
+
+function availability(session) {
+  const active = session.games.filter(game => game.score === null);
+  const playing = new Set(active.flatMap(game => game.teams.flat()));
+  const activeCourts = new Set(active.map(game => game.court));
+  const open = Array.from({ length: session.courts }, (_, index) => index + 1)
+    .filter(court => !activeCourts.has(court));
+  const waiting = session.players.map((_, id) => id).filter(id => !playing.has(id));
+  const count = session.mode === "all" && active.length ? 0 : Math.min(open.length, Math.floor(waiting.length / 4));
+  return { active, open, waiting, count };
+}
+
+function pairKey(a, b, size) {
+  return Math.min(a, b) * size + Math.max(a, b);
+}
+
+function recordPair(history, key, mix) {
+  const pair = history.get(key) ?? { count: 0, last: 0 };
+  pair.count++;
+  pair.last = mix;
+  history.set(key, pair);
+}
+
+function schedulingHistory(session) {
+  const players = session.players.map(() => ({ games: 0, last: 0 }));
+  const partners = new Map();
+  const opponents = new Map();
+  const size = players.length;
+  for (const game of session.games) {
+    const [first, second] = game.teams;
+    for (const team of game.teams) {
+      recordPair(partners, pairKey(team[0], team[1], size), game.mix);
+      for (const id of team) {
+        players[id].games++;
+        players[id].last = game.mix;
+      }
+    }
+    for (const a of first) {
+      for (const b of second) recordPair(opponents, pairKey(a, b, size), game.mix);
+    }
+  }
+  return { players, partners, opponents, size };
+}
+
+function shuffle(items, random) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swap = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function bestTeams(group, history, mix) {
+  function cost(pairs, a, b) {
+    const record = pairs.get(pairKey(a, b, history.size));
+    return record ? record.count + Math.max(0, 4 - (mix - record.last)) : 0;
+  }
+
+  let best;
+  for (const split of TEAM_SPLITS) {
+    const [first, second] = split.map(team => team.map(index => group[index]));
+    const partnerCost = cost(history.partners, first[0], first[1]) + cost(history.partners, second[0], second[1]);
+    let opponentCost = 0;
+    for (const a of first) {
+      for (const b of second) opponentCost += cost(history.opponents, a, b);
+    }
+    const total = 4 * partnerCost + opponentCost;
+    if (!best || total < best.total) best = { teams: [first, second], total };
+  }
+  return best;
+}
+
+function schedule(session, random = Math.random) {
+  const { open, waiting, count } = availability(session);
+  if (!count) return [];
+  const mix = (session.games.at(-1)?.mix ?? 0) + 1;
+  const history = schedulingHistory(session);
+  const comparePriority = (a, b) => history.players[a].games - history.players[b].games ||
+    history.players[a].last - history.players[b].last;
+
+  let best;
+  let bestCost = Infinity;
+  for (let attempt = 0; attempt < 160; attempt++) {
+    // Fairness determines who gets a court. Only players tied at the cutoff can trade places.
+    const eligible = shuffle(waiting, random).sort(comparePriority).slice(0, count * 4);
+    const lineup = shuffle(eligible, random);
+    const pairings = open.slice(0, count).map((court, index) => {
+      const group = lineup.slice(index * 4, index * 4 + 4);
+      return { court, ...bestTeams(group, history, mix) };
+    });
+    const cost = pairings.reduce((sum, game) => sum + game.total, 0);
+    if (cost < bestCost) {
+      bestCost = cost;
+      best = pairings;
+      if (cost === 0) break;
+    }
+  }
+  return best.map(({ court, teams }) => ({ mix, court, teams, score: null }));
+}
+
+function standings(session) {
+  const rows = session.players.map(name => ({ name, played: 0, wins: 0, difference: 0 }));
+  for (const { teams, score } of session.games) {
+    if (score === null) continue;
+    teams.forEach((team, index) => {
+      const difference = score[index] - score[1 - index];
+      for (const id of team) {
+        const row = rows[id];
+        row.played++;
+        row.wins += Number(difference > 0);
+        row.difference += difference;
+      }
+    });
+  }
+  return rows.sort((a, b) => b.wins - a.wins || b.difference - a.difference || a.name.localeCompare(b.name));
+}
+const byId = id => document.getElementById(id);
+const drafts = new Map();
+let session = null;
+let storageAvailable = true;
+let savedLocally = false;
+let editing = null;
+
+function element(tag, settings = {}, children = []) {
+  const node = document.createElement(tag);
+  Object.assign(node, settings);
+  node.append(...children);
+  return node;
+}
+
+function showNotice(message, error = false) {
+  const notice = byId("notice");
+  notice.classList.toggle("error", error);
+  notice.hidden = !message;
+  notice.textContent = message;
+}
+
+function updateStorageStatus() {
+  const status = byId("storage");
+  status.textContent = !storageAvailable ? "Local save unavailable" : savedLocally ? "Saved on this browser" : "Ready offline";
+  status.dataset.error = String(!storageAvailable);
+}
+
+function save(next, message) {
+  try {
+    if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    else localStorage.removeItem(STORAGE_KEY);
+    storageAvailable = true;
+    savedLocally = Boolean(next);
+    showNotice(message);
+  } catch {
+    storageAvailable = false;
+    savedLocally = false;
+    const warning = next ? " Local save failed. Back up JSON before closing this tab."
+      : " The browser could not clear its local save. A previous session may reappear on reload.";
+    showNotice(message + warning, true);
+  }
+  session = next;
+  render();
+}
+
+function names(team) {
+  return team.map(id => session.players[id]).join(" & ");
+}
+
+function scoreField(team, suffix, index, value = "") {
+  const id = "score-" + suffix + "-" + index;
+  const label = element("label", { htmlFor: id }, [
+    element("small", { textContent: "Team " + (index ? "B" : "A") + " score" }),
+    names(team)
+  ]);
+  const input = element("input", {
+    id, type: "number", inputMode: "numeric", min: "0", max: String(MAX_SCORE), step: "1", required: true, value
+  });
+  return element("div", { className: "team" }, [label, input]);
+}
+
+function formScore(form) {
+  return Array.from(form.querySelectorAll("input"), input => input.valueAsNumber);
+}
+
+function updateScore(index, score, message) {
+  const games = session.games.map((game, id) => id === index ? { ...game, score } : game);
+  drafts.delete(index);
+  save({ ...session, games }, message);
+}
+
+function courtCard(court, game, index) {
+  const title = element("h3", { textContent: "Court " + court, tabIndex: -1, id: "court-title-" + court });
+  const tag = element("span", { className: "tag", textContent: game ? "In play" : "Open" });
+  const card = element("article", { className: "court" }, [element("header", {}, [title, tag])]);
+  if (game) {
+    const values = drafts.get(index) ?? [];
+    const fields = game.teams.map((team, teamIndex) => scoreField(team, index, teamIndex, values[teamIndex]));
+    const form = element("form", { className: "teams" }, [
+      ...fields, element("button", { type: "submit", className: "primary", textContent: "Save score" })
+    ]);
+    form.setAttribute("aria-labelledby", title.id);
+    form.addEventListener("input", () => {
+      drafts.set(index, Array.from(form.querySelectorAll("input"), input => input.value));
+    });
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const score = formScore(form);
+      if (!validScore(score)) return;
+      updateScore(index, score, "Score saved. Court " + court + " is open.");
+      byId(title.id).focus();
+    });
+    card.append(form);
+  }
+  return card;
+}
+
+function render() {
+  byId("setup").hidden = Boolean(session);
+  byId("session").hidden = !session;
+  byId("session-nav").hidden = !session;
+  byId("export").disabled = !session;
+  updateStorageStatus();
+  if (!session) return;
+
+  const { active, open, waiting, count } = availability(session);
+  byId("summary").textContent = session.players.length + " players · " + session.courts +
+    (session.courts === 1 ? " court" : " courts");
+  byId("mode").value = session.mode;
+  byId("remix").disabled = !count;
+  byId("remix-help").textContent = session.mode === "all" && active.length
+    ? "Save all in-play scores to remix."
+    : count ? count + (count === 1 ? " court ready to remix." : " courts ready to remix.")
+    : open.length ? "Four available players are needed for an open court." : "Save a score to open a court.";
+  byId("court-status").textContent = active.length + " in play · " + open.length + " open";
+  byId("bench").replaceChildren(
+    element("strong", { textContent: "Waiting (" + waiting.length + ")" }),
+    waiting.length ? " · " + waiting.map(id => session.players[id]).join(", ") : " · Everyone is playing"
+  );
+
+  const activeByCourt = new Map();
+  const completed = [];
+  session.games.forEach((game, index) => {
+    if (game.score === null) activeByCourt.set(game.court, [game, index]);
+    else completed.push([game, index]);
+  });
+  byId("cards").replaceChildren(...Array.from({ length: session.courts }, (_, index) => {
+    const court = index + 1;
+    return courtCard(court, ...(activeByCourt.get(court) ?? []));
+  }));
+
+  byId("standings").replaceChildren(...standings(session).map(row => {
+    const difference = row.difference > 0 ? "+" + row.difference : row.difference;
+    return element("tr", {}, [row.name, row.played, row.wins, difference]
+      .map(value => element("td", { textContent: value })));
+  }));
+  const results = document.createDocumentFragment();
+  for (const [game, index] of completed.reverse()) {
+    const button = element("button", { type: "button", id: "correct-" + index, textContent: "Correct score" });
+    button.setAttribute("aria-label", "Correct score for game " + (index + 1));
+    button.addEventListener("click", () => openCorrection(index));
+    const detail = element("div", {}, [
+      element("p", { className: "hint muted", textContent: "Game " + (index + 1) + " · Court " + game.court }),
+      element("p", {}, [names(game.teams[0]) + "  ", element("strong", { textContent: game.score.join("–") }), "  " + names(game.teams[1])])
+    ]);
+    results.append(element("article", { className: "result" }, [detail, button]));
+  }
+  if (!completed.length) results.append(element("p", { className: "hint muted", textContent: "Saved scores will appear here." }));
+  byId("results").replaceChildren(results);
+}
+
+function openCorrection(index) {
+  const game = session.games[index];
+  editing = index;
+  byId("correction-detail").textContent = "Game " + (index + 1) + " · Court " + game.court;
+  byId("correction-fields").replaceChildren(...game.teams.map((team, teamIndex) =>
+    scoreField(team, "correction", teamIndex, game.score[teamIndex])
+  ));
+  byId("correction").showModal();
+}
+
+byId("cancel-correction").addEventListener("click", () => byId("correction").close());
+byId("correction-form").addEventListener("submit", event => {
+  event.preventDefault();
+  const score = formScore(event.currentTarget);
+  if (!validScore(score)) return;
+  const index = editing;
+  byId("correction").close();
+  updateScore(index, score, "Game " + (index + 1) + " corrected. Leaderboard updated.");
+  byId("correct-" + index).focus();
+});
+
+byId("court-count").append(...Array.from({ length: MAX_COURTS }, (_, index) =>
+  element("option", { value: index + 1, textContent: index + 1 })
+));
+byId("setup-form").addEventListener("submit", event => {
+  event.preventDefault();
+  const players = byId("roster").value.split(/\r?\n/).map(name => name.trim()).filter(Boolean);
+  if (!validRoster(players)) {
+    showNotice("Enter 4 to " + MAX_PLAYERS + " distinct names, each at most " + MAX_NAME + " characters.", true);
+    byId("roster").focus();
+    return;
+  }
+  const next = makeSession(players, Number(byId("court-count").value));
+  next.games = schedule(next);
+  save(next, "Mixer started. The first games are ready.");
+  byId("court-title-1").focus();
+});
+
+byId("mode").addEventListener("change", event => {
+  save({ ...session, mode: event.currentTarget.value }, "Remix timing saved.");
+});
+byId("remix").addEventListener("click", () => {
+  const games = schedule(session);
+  if (!games.length) return;
+  save({ ...session, games: [...session.games, ...games] },
+    games.length + (games.length === 1 ? " new game assigned." : " new games assigned."));
+  byId("court-title-" + games[0].court).focus();
+});
+byId("new").addEventListener("click", () => {
+  if (!window.confirm("Clear this session and its results? Back up JSON first if you want to keep it.")) return;
+  save(null, "Session cleared.");
+  drafts.clear();
+  byId("setup-form").reset();
+  byId("roster").focus();
+});
+byId("export").addEventListener("click", () => {
+  if (!session) return;
+  const file = new Blob([JSON.stringify(session, null, 2) + "\n"], { type: "application/json" });
+  const url = URL.createObjectURL(file);
+  const date = new Date();
+  const stamp = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map(part => String(part).padStart(2, "0")).join("-");
+  const link = element("a", { href: url, download: "paddlepot-mixer-" + stamp + ".json" });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showNotice("JSON backup download started.");
+});
+byId("import").addEventListener("click", () => byId("backup-file").click());
+byId("backup-file").addEventListener("change", async event => {
+  const input = event.currentTarget;
+  const [file] = input.files;
+  input.value = "";
+  if (!file) return;
+  let restored;
+  try {
+    restored = readBackup(await file.text());
+  } catch (error) {
+    showNotice(error.message || "Could not read the backup file.", true);
+    return;
+  }
+  if (session && !window.confirm("Replace this session and its results with the JSON backup?")) return;
+  drafts.clear();
+  save(restored, "Session restored from JSON.");
+  byId("court-title-1").focus();
+});
+
+try {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored !== null) {
+    try {
+      session = readBackup(stored);
+      savedLocally = true;
+    } catch {
+      showNotice("The saved session could not be read. Restore a JSON backup to continue.", true);
+    }
+  }
+} catch {
+  storageAvailable = false;
+  showNotice("This browser blocked local storage. Back up JSON before closing this tab.", true);
+}
+render();
+</script>
+</body>
+</html>
