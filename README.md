@@ -1,11 +1,13 @@
 # PaddlePot Offline
 
-A doubles pickleball Mixer you can run in your browser.
+Run a doubles pickleball Mixer or King of the Court session in your browser.
 
 - [Open the Mixer](https://snapcrab.github.io/paddlepot-offline/paddlepot-offline.html)
 - [Download the HTML](https://github.com/snapcrab/paddlepot-offline/releases/latest/download/paddlepot-offline.html)
 - [Download the ZIP](https://github.com/snapcrab/paddlepot-offline/releases/latest/download/paddlepot-offline.zip)
-- [Read the user guide (PDF)](./paddlepot-offline-user-guide.pdf)
+- [Read the Mixer user guide](./paddlepot-offline-user-guide.html)
+- [Open the standalone King of the Court file](./paddlepot-kotc-offline.html)
+- [Read the King of the Court user guide](./paddlepot-kotc-offline-user-guide.html)
 
 ## Features
 
@@ -23,13 +25,12 @@ PaddlePot Offline is a standalone doubles Mixer for clubs and volunteers. Use it
 - [Open in browser](https://snapcrab.github.io/paddlepot-offline/paddlepot-offline.html) (internet needed to load)
 - [Download HTML](https://github.com/snapcrab/paddlepot-offline/releases/download/v1.4.4/paddlepot-offline.html)
 - [Download ZIP](https://github.com/snapcrab/paddlepot-offline/releases/download/v1.4.4/paddlepot-offline.zip) (HTML, licence and guide)
-- [User guide v1.4.4 (PDF)](https://github.com/snapcrab/paddlepot-offline/releases/download/v1.4.4/paddlepot-offline-user-guide.pdf)
 
 For offline use, download the HTML or extract it from the ZIP, then open it in a compatible browser that can run local HTML files. Before relying on it at court, turn on airplane mode and try starting a Mixer and saving a score on the device you’ll use.
 
 Scores and session data stay in the browser. The hosted page and a local copy may have separate saves, and browsers don’t sync those saves between devices. To move a session, choose **Settings → Back up JSON** in the original copy, then choose **Restore JSON** in the destination copy (on the setup screen or in Settings). Restore replaces any session already open there, so back it up first if you want to keep it.
 
-The [MIT licence](./LICENSE) covers the original Mixer code. It allows use, adaptation and sharing, including commercial use, as long as the licence and copyright notice are kept with copies or substantial portions of the code. The PaddlePot name and logo and the PDF guide are outside that grant. The embedded Inter, JetBrains Mono and Space Grotesk fonts are under the SIL Open Font License 1.1; their notices are in the HTML.
+The [MIT licence](./LICENSE) covers the original Mixer code. It allows use, adaptation and sharing, including commercial use, as long as the licence and copyright notice are kept with copies or substantial portions of the code. The PaddlePot name and logo and the user guides are outside that grant. The embedded Inter, JetBrains Mono and Space Grotesk fonts are under the SIL Open Font License 1.1; their notices are in the HTML.
 
 See [Contributing](./CONTRIBUTING.md) to report a bug, share an idea or help improve the Mixer.
 
@@ -56,3 +57,9 @@ Use **Release allocation** before saving any score for the round. Add players or
 ## King of the Court Offline v0.2.1
 
 KOTC uses Mixer's layout, logo, local save indicator, embedded fonts, tabs and court cards. Partners appear as **Player 3 & Player 1**. Log each court's score from its card or save all entered scores from the Play tab.
+
+## HTML user guides
+
+The [Mixer guide for v1.4.5](./paddlepot-offline-user-guide.html) covers releasing an unscored court. The [King of the Court guide for v0.2.1](./paddlepot-kotc-offline-user-guide.html) covers round setup, rotation, release and results.
+
+Save a guide's HTML file to read it offline. Keep it beside the matching app HTML if you want the guide's **Open** link to work from a local copy.
