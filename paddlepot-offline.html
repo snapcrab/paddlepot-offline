@@ -759,7 +759,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button id="new" class="danger" type="button">New session</button>
       </div>
       <p class="settings-help"><a href="https://github.com/snapcrab/paddlepot-offline" target="_blank" rel="noopener noreferrer">GitHub repository</a> · Find the user guide in the README.</p>
-      <small class="version">PaddlePot Offline v1.4.4</small>
+      <small class="version">PaddlePot Offline v1.4.5</small>
     </section>
   </div>
 </main>
@@ -1170,6 +1170,25 @@ function updateScores(entries, message) {
   save({ ...session, games, waitingSince }, message);
 }
 
+function releaseAllocation(index) {
+  const game = session.games[index];
+  if (game?.score !== null || !window.confirm("Release Court " + game.court + "'s allocation? Its players will return to their racks or waiting queue.")) return;
+
+  // Keep other courts' score drafts attached to their games when the indices shift.
+  const remainingDrafts = [...drafts].filter(([key]) => key !== index);
+  drafts.clear();
+  for (const [key, values] of remainingDrafts) drafts.set(key > index ? key - 1 : key, values);
+
+  // Allocation does not change waitingSince. Removing the game restores the prior wait order and history.
+  const remainingGames = session.games.filter((_, key) => key !== index);
+  const mixRemains = remainingGames.some(other => other.mix === game.mix);
+  const games = mixRemains ? remainingGames : remainingGames.map(other =>
+    other.mix > game.mix ? { ...other, mix: other.mix - 1 } : other
+  );
+  save({ ...session, games }, "Court " + game.court + " allocation released. Available players are back in the queue.");
+  byId("court-title-" + game.court).focus();
+}
+
 function enteredCourtScores() {
   return Array.from(byId("cards").querySelectorAll("form[data-game-index]"), form => [
     Number(form.dataset.gameIndex), formScore(form)
@@ -1199,6 +1218,10 @@ function courtCard(court, game, index) {
     const form = element("form", { className: "teams" }, [
       ...fields, element("button", { type: "submit", className: "primary", textContent: "Log score & finish" })
     ]);
+    const release = element("button", { type: "button", textContent: "Release allocation" });
+    release.setAttribute("aria-label", "Release allocation for Court " + court);
+    release.addEventListener("click", () => releaseAllocation(index));
+    form.append(release);
     form.dataset.gameIndex = index;
     form.setAttribute("aria-labelledby", title.id);
     form.addEventListener("input", () => {
@@ -1236,7 +1259,7 @@ function courtCard(court, game, index) {
 
 function courtStatus(court, active) {
   const unavailable = session.unavailableCourts.includes(court);
-  if (active) return unavailable ? "In play · closes after score" : "In play";
+  if (active) return unavailable ? "In play · closes after game" : "In play";
   return unavailable ? "Unavailable" : "Open";
 }
 
@@ -1388,9 +1411,9 @@ function render() {
   byId("remix").disabled = !count;
   byId("remix-help").textContent = closed === session.courts ? "Make a court available to remix."
     : session.mode === "all" && active.length
-    ? "Save all in-play scores to remix."
+    ? "Finish or release all in-play games to remix."
     : count ? count + (count === 1 ? " court ready to remix." : " courts ready to remix.")
-    : open.length ? "Four available players are needed for an open court." : "Save a score to open a court.";
+    : open.length ? "Four available players are needed for an open court." : "Save a score or release an allocation to open a court.";
   const unavailable = session.courts - active.length - open.length;
   byId("court-status").textContent = active.length + " in play · " + open.length + " open" +
     (unavailable ? " · " + unavailable + " unavailable" : "");

@@ -47,6 +47,7 @@
     border-radius: 8px; min-height: 44px; padding: 8px 12px;
   }
   input, textarea { width: 100%; background: var(--ink); }
+  input:not([type="radio"]), textarea { font-size: 16px; }
   textarea { resize: vertical; }
   button { background: var(--card); font-weight: 650; cursor: pointer; }
   button:hover:not(:disabled) { border-color: var(--green); }
@@ -69,6 +70,22 @@
   #save-scores { width: 100%; }
   .row { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
   .row button, .row span:last-child { flex-shrink: 0; }
+  .player-entry-options { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .player-entry-options legend { font-weight: 650; }
+  .player-entry-options label { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+  .player-entry-options input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--green); }
+  .player-count-control { display: flex; gap: 8px; }
+  .player-count-control input { min-width: 0; text-align: center; appearance: textfield; }
+  .player-count-control input::-webkit-inner-spin-button, .player-count-control input::-webkit-outer-spin-button { appearance: none; }
+  .player-count-control button { flex: 0 0 48px; }
+  .add-player summary { color: var(--green); min-height: 44px; align-content: center; font-weight: 650; }
+  .status-list { list-style: none; margin: 0; padding: 0; }
+  .status-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; border-top: 1px solid var(--line); padding: 10px 0; overflow-wrap: anywhere; }
+  .status-list small { display: block; margin-top: 2px; }
+  .availability-switch { width: 60px; display: grid; place-items: center; padding: 0; border: 0; background: transparent; }
+  .availability-switch span { width: 52px; height: 30px; border-radius: 15px; background: var(--coral); display: flex; align-items: center; padding: 3px; justify-content: flex-end; }
+  .availability-switch[aria-checked="true"] span { background: var(--green); justify-content: flex-start; }
+  .availability-switch span::before { content: ""; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; }
   details { border-top: 1px solid var(--line); padding-top: 8px; }
   summary { cursor: pointer; margin-bottom: 8px; }
   #play { scroll-margin-top: 12px; }
@@ -91,9 +108,25 @@
   <section id="setup" class="stack">
     <h2>Set up a session</h2>
     <form id="setup-form">
-      <label>Players <span class="hint">· one name per line</span>
-        <textarea id="roster" rows="7" placeholder="Alex&#10;Bailey&#10;Casey&#10;Drew" required></textarea>
-      </label>
+      <fieldset class="player-entry-options">
+        <legend>Add players by</legend>
+        <label><input type="radio" name="player-entry" value="count" checked> Number of players</label>
+        <label><input type="radio" name="player-entry" value="names"> Enter player names</label>
+      </fieldset>
+      <div id="count-field">
+        <label for="player-count">Number of players</label>
+        <div class="player-count-control">
+          <button type="button" id="fewer-players" aria-label="Decrease number of players">−</button>
+          <input id="player-count" type="number" inputmode="numeric" min="8" max="200" step="1" value="8" required aria-describedby="count-help">
+          <button type="button" id="more-players" aria-label="Increase number of players">+</button>
+        </div>
+        <p class="hint" id="count-help">Players will be named Player 1, Player 2, and so on.</p>
+      </div>
+      <div id="names-field" hidden>
+        <label for="roster">Player names</label>
+        <textarea id="roster" rows="7" placeholder="Alex&#10;Bailey&#10;Casey&#10;Drew" aria-describedby="roster-help" required disabled></textarea>
+        <p class="hint" id="roster-help">Enter one distinct name per line.</p>
+      </div>
       <label>Courts
         <input id="court-count" type="number" min="2" max="24" value="2" required>
       </label>
@@ -107,12 +140,18 @@
   <section id="play" class="stack" tabindex="-1" hidden></section>
   <section id="players" class="stack" hidden>
     <h2>Players</h2>
-    <p class="hint">Availability applies to the next round. Players returning from a break keep their ladder position.</p>
-    <form id="add-player-form">
-      <label>Player name<input id="new-player" maxlength="80" required></label>
-      <div><button type="submit">Add player</button></div>
-    </form>
-    <div class="stack" id="player-list"></div>
+    <p class="hint">Availability applies to the next round. Games already in play can finish.</p>
+    <details class="add-player" id="add-player">
+      <summary>+ Add player</summary>
+      <form id="add-player-form">
+        <label for="new-player">Player name</label>
+        <input id="new-player" maxlength="80" aria-describedby="new-player-help">
+        <p class="hint" id="new-player-help">Leave blank to assign the next player number.</p>
+        <button type="submit" class="primary">Add player</button>
+      </form>
+    </details>
+    <p class="hint" id="roster-full" hidden>The roster is full.</p>
+    <ul class="status-list" id="player-list"></ul>
   </section>
   <section id="results" class="stack" hidden></section>
   <section id="settings" class="stack" hidden>
@@ -123,7 +162,7 @@
       <button type="button" data-restore>Restore JSON</button>
       <button id="new-session" class="danger" type="button">New session</button>
     </div>
-    <small class="muted">PaddlePot King of the Court Offline v0.1.0</small>
+    <small class="muted">PaddlePot King of the Court Offline v0.2.0</small>
   </section>
 </main>
 <script>
@@ -133,6 +172,7 @@ const FORMAT = "paddlepot-kotc-offline";
 const BACKUP_VERSION = 1;
 const STORAGE_KEY = FORMAT + ".session.v1";
 const MAX_PLAYERS = 200;
+const MIN_PLAYERS = 8;
 const MAX_NAME = 80;
 const MAX_COURTS = 24;
 const MAX_SCORE = 999;
@@ -141,6 +181,7 @@ const TEAM_SPLITS = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
 
 const byId = id => document.getElementById(id);
 const tabs = Array.from(byId("session-nav").querySelectorAll("button"));
+const playerCount = byId("player-count");
 let session = null;
 let view = "play";
 let savedLocally = false;
@@ -168,7 +209,7 @@ function integer(value, min, max) {
 }
 
 function validPlayers(players) {
-  return Array.isArray(players) && integer(players.length, 2 * DOUBLES, MAX_PLAYERS)
+  return Array.isArray(players) && integer(players.length, MIN_PLAYERS, MAX_PLAYERS)
     && players.every(name => typeof name === "string" && name === name.trim() && integer(name.length, 1, MAX_NAME))
     && new Set(players.map(name => name.toLowerCase())).size === players.length;
 }
@@ -201,9 +242,9 @@ function readBackup(raw) {
   if (data?.format !== FORMAT || data.version !== BACKUP_VERSION) {
     throw new Error("Choose a PaddlePot Offline King of the Court v1 JSON backup.");
   }
-  const { players, courts, ladder, queue, unavailable, returning, rounds, ended } = data;
+  const { players, courts, ladder, queue, unavailable, returning, rounds, ended, ladderAdvanced = false } = data;
   if (!validPlayers(players) || !integer(courts, 2, MAX_COURTS) || courts * DOUBLES > players.length
-      || !Array.isArray(rounds) || typeof ended !== "boolean") {
+      || !Array.isArray(rounds) || typeof ended !== "boolean" || typeof ladderAdvanced !== "boolean") {
     throw new Error("The backup contains invalid session settings.");
   }
   const count = players.length;
@@ -214,7 +255,8 @@ function readBackup(raw) {
   }
   for (const [index, round] of rounds.entries()) {
     if (!round || !Array.isArray(round.games) || !integer(round.games.length, 1, courts)
-        || !playerIds(round.sitters, count)) {
+        || !playerIds(round.sitters, count)
+        || (round.returning !== undefined && !playerIds(round.returning, count))) {
       throw new Error("The backup contains an invalid round.");
     }
     for (const game of round.games) {
@@ -230,7 +272,10 @@ function readBackup(raw) {
     }
   }
   if (ended && !isComplete(rounds.at(-1))) throw new Error("The backup contains an unfinished final round.");
-  return { format: FORMAT, version: BACKUP_VERSION, players, courts, ladder, queue, unavailable, returning, rounds, ended };
+  if (ladderAdvanced && rounds.length && !isComplete(rounds.at(-1))) {
+    throw new Error("The backup contains an invalid round release.");
+  }
+  return { format: FORMAT, version: BACKUP_VERSION, players, courts, ladder, queue, unavailable, returning, rounds, ended, ladderAdvanced };
 }
 
 function save(next, message) {
@@ -260,7 +305,7 @@ function newSession(players, courts) {
   const ladder = shuffle(players.map((_, id) => id));
   return {
     format: FORMAT, version: BACKUP_VERSION, players, courts, ladder, queue: [...ladder],
-    unavailable: [], returning: [], rounds: [], ended: false
+    unavailable: [], returning: [], rounds: [], ended: false, ladderAdvanced: false
   };
 }
 
@@ -310,7 +355,7 @@ function chooseTeams(group, partners, offset) {
 function nextRound(state) {
   const previous = state.rounds.at(-1);
   if (state.ended || (previous && !isComplete(previous))) return null;
-  const ladder = moveLadder(state.ladder, previous, countWins(state.rounds, state.players.length));
+  const ladder = state.ladderAdvanced ? state.ladder : moveLadder(state.ladder, previous, countWins(state.rounds, state.players.length));
   const active = new Set(playingIds(previous));
   const bench = new Set(previous?.sitters);
   const returning = new Set(state.returning);
@@ -337,7 +382,7 @@ function nextRound(state) {
     score: null
   }));
   return { ladder, queue: [...queue, ...state.queue.filter(id => unavailable.has(id))],
-    round: { games, sitters: queue.filter(id => !selected.has(id)) } };
+    round: { games, sitters: queue.filter(id => !selected.has(id)), returning: [...state.returning] } };
 }
 
 function longestStreaks(state) {
@@ -432,6 +477,16 @@ function scoreForm(round) {
   return form;
 }
 
+function releaseRound(round) {
+  if (round.games.some(game => game.score !== null)
+      || !window.confirm("Release this round's allocation? You can change players and start the round again.")) return;
+  scoreDrafts.clear();
+  const returning = [...new Set([...(round.returning ?? []), ...session.returning])]
+    .filter(id => !session.unavailable.includes(id));
+  save({ ...session, rounds: session.rounds.slice(0, -1), returning, ladderAdvanced: true }, "Round allocation released.");
+  (byId("next-round-title") ?? byId("play-title")).focus();
+}
+
 function renderPlay() {
   const play = byId("play");
   const round = session.rounds.at(-1);
@@ -446,7 +501,14 @@ function renderPlay() {
   }
   if (round) {
     const toScore = round.games.filter(game => game.score === null).length;
-    play.append(element("p", { className: "hint", textContent: toScore ? toScore + " of " + round.games.length + " courts to score" : "All courts scored" }), scoreForm(round));
+    play.append(element("p", { className: "hint", textContent: toScore ? toScore + " of " + round.games.length + " courts to score" : "All courts scored" }));
+    if (session.ladderAdvanced) play.append(courtsGrid(round), sitterLine(round));
+    else play.append(scoreForm(round));
+    if (toScore === round.games.length) {
+      play.append(element("div", { className: "actions" }, [
+        button("Release allocation", () => releaseRound(round))
+      ]));
+    }
     if (!isComplete(round)) return;
   }
   const next = nextRound(session);
@@ -454,7 +516,7 @@ function renderPlay() {
     const heading = element("h3", { id: "next-round-title", tabIndex: -1, textContent: "Round " + (session.rounds.length + 1) + " preview" });
     const start = button(round ? "Start next round" : "Start round 1", () => {
       if (scoreDrafts.size) return;
-      save({ ...session, ladder: next.ladder, queue: next.queue, returning: [], rounds: [...session.rounds, next.round] },
+      save({ ...session, ladder: next.ladder, queue: next.queue, returning: [], ladderAdvanced: false, rounds: [...session.rounds, next.round] },
         "Round " + (session.rounds.length + 1) + " started.");
       byId("play-title").focus();
     }, "primary");
@@ -486,26 +548,41 @@ function renderPlay() {
 function renderPlayers() {
   const round = session.rounds.at(-1);
   const active = new Set(playingIds(round));
-  byId("add-player-form").hidden = session.ended || session.players.length >= MAX_PLAYERS;
+  const courts = new Map();
+  const played = Array(session.players.length).fill(0);
+  for (const entry of session.rounds) {
+    entry.games.forEach((game, i) => {
+      for (const id of game.teams.flat()) {
+        if (game.score !== null) played[id]++;
+        else if (entry === round) courts.set(id, i + 1);
+      }
+    });
+  }
+  byId("add-player").hidden = session.ended || session.players.length >= MAX_PLAYERS;
+  byId("roster-full").hidden = session.ended || session.players.length < MAX_PLAYERS;
   byId("player-list").replaceChildren(...session.ladder.map(id => {
+    const name = session.players[id];
     const unavailable = session.unavailable.includes(id);
-    const status = unavailable ? "On break next round" : session.returning.includes(id) ? "Returning next round"
-      : active.has(id) ? "On court this round" : "Available";
-    const row = element("div", { className: "row" }, [
-      element("div", {}, [element("strong", { textContent: session.players[id] }), element("p", { className: "hint", textContent: status })])
+    const court = courts.get(id);
+    const status = court ? "Court " + court + (unavailable ? " · unavailable next round" : "")
+      : unavailable ? "Unavailable" : session.returning.includes(id) ? "Returning next round" : "Waiting";
+    const row = element("li", {}, [
+      element("div", {}, [name, element("small", { className: "muted", textContent: played[id] + " played · " + status })])
     ]);
     if (!session.ended) {
-      const toggle = button(unavailable ? "Available" : "Take break", () => {
+      const toggle = element("button", { id: "player-availability-" + id, type: "button", className: "availability-switch" }, [element("span")]);
+      toggle.setAttribute("role", "switch");
+      toggle.setAttribute("aria-label", name + " available for the next round");
+      toggle.setAttribute("aria-checked", String(!unavailable));
+      toggle.addEventListener("click", () => {
         const returning = session.returning.filter(player => player !== id);
         if (unavailable && !active.has(id)) returning.push(id);
         save({
           ...session, returning,
           unavailable: unavailable ? session.unavailable.filter(player => player !== id) : [...session.unavailable, id]
-        }, session.players[id] + (unavailable ? " available for the next round." : " on break from the next round."));
-        byId("availability-" + id).focus();
+        }, name + (unavailable ? " is available for the next round." : " is unavailable for the next round."));
+        byId(toggle.id).focus();
       });
-      toggle.id = "availability-" + id;
-      toggle.setAttribute("aria-label", toggle.textContent + " · " + session.players[id]);
       row.append(toggle);
     }
     return row;
@@ -552,13 +629,45 @@ function showView(next) {
 
 for (const tab of tabs) tab.addEventListener("click", () => showView(tab.dataset.view));
 
+function syncCountButtons() {
+  const count = playerCount.valueAsNumber;
+  byId("fewer-players").disabled = count <= MIN_PLAYERS;
+  byId("more-players").disabled = count >= MAX_PLAYERS;
+}
+
+function stepPlayerCount(step) {
+  const count = playerCount.valueAsNumber;
+  const next = Number.isFinite(count) ? Math.trunc(count) + step : MIN_PLAYERS;
+  playerCount.value = Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, next));
+  syncCountButtons();
+}
+
+function syncRosterFields() {
+  const useCount = byId("setup-form").elements.namedItem("player-entry").value === "count";
+  byId("count-field").hidden = !useCount;
+  byId("names-field").hidden = useCount;
+  playerCount.disabled = !useCount;
+  byId("roster").disabled = useCount;
+  syncCountButtons();
+}
+
+playerCount.addEventListener("input", syncCountButtons);
+byId("fewer-players").addEventListener("click", () => stepPlayerCount(-1));
+byId("more-players").addEventListener("click", () => stepPlayerCount(1));
+byId("setup-form").querySelector(".player-entry-options").addEventListener("change", syncRosterFields);
+
 byId("setup-form").addEventListener("submit", event => {
   event.preventDefault();
-  const players = byId("roster").value.split(/\r?\n/).map(name => name.trim()).filter(Boolean);
+  const useCount = !playerCount.disabled;
+  const count = playerCount.valueAsNumber;
+  if (useCount && !integer(count, MIN_PLAYERS, MAX_PLAYERS)) return;
+  const players = useCount
+    ? Array.from({ length: count }, (_, index) => "Player " + (index + 1))
+    : byId("roster").value.split(/\r?\n/).map(name => name.trim()).filter(Boolean);
   const courts = byId("court-count").valueAsNumber;
   if (!validPlayers(players) || !integer(courts, 2, MAX_COURTS) || players.length < courts * DOUBLES) {
     announce("Enter four players per court, up to " + MAX_PLAYERS + " distinct names of at most " + MAX_NAME + " characters.", true);
-    byId("roster").focus();
+    (useCount ? playerCount : byId("roster")).focus();
     return;
   }
   view = "play";
@@ -568,10 +677,17 @@ byId("setup-form").addEventListener("submit", event => {
 
 byId("add-player-form").addEventListener("submit", event => {
   event.preventDefault();
+  if (session.ended || session.players.length >= MAX_PLAYERS) return;
   const input = byId("new-player");
-  const name = input.value.trim();
-  if (!name || session.players.some(player => player.toLowerCase() === name.toLowerCase())) {
-    announce("Enter a distinct player name.", true);
+  const taken = new Set(session.players.map(name => name.toLowerCase()));
+  let name = input.value.trim();
+  if (!name) {
+    let number = 1;
+    while (taken.has("player " + number)) number++;
+    name = "Player " + number;
+  }
+  if (name.length > MAX_NAME || taken.has(name.toLowerCase())) {
+    announce("Enter a distinct player name of at most " + MAX_NAME + " characters.", true);
     input.focus();
     return;
   }
@@ -580,7 +696,7 @@ byId("add-player-form").addEventListener("submit", event => {
   save({ ...session, players: [...session.players, name], ladder: [...session.ladder, id], queue: [...session.queue, id] },
     name + " added at the bottom of the ladder.");
   if (session.players.length < MAX_PLAYERS) input.focus();
-  else byId("availability-" + id).focus();
+  else byId("player-availability-" + id).focus();
 });
 
 byId("export").addEventListener("click", () => {
@@ -612,6 +728,8 @@ byId("backup-file").addEventListener("change", async event => {
   }
   if (session && !window.confirm("Replace this session and its results with the JSON backup?")) return;
   scoreDrafts.clear();
+  byId("add-player").open = false;
+  byId("add-player-form").reset();
   view = "play";
   save(restored, "Session restored from JSON.");
   byId("play-title").focus();
@@ -621,9 +739,11 @@ byId("new-session").addEventListener("click", () => {
   if (!window.confirm("Clear this session and its results? Back up JSON first if you want to keep it.")) return;
   scoreDrafts.clear();
   byId("setup-form").reset();
+  syncRosterFields();
+  byId("add-player").open = false;
   byId("add-player-form").reset();
   save(null, "Session cleared.");
-  byId("roster").focus();
+  playerCount.focus();
 });
 
 try {
@@ -635,6 +755,7 @@ try {
 } catch {
   announce("The browser save could not be loaded. Restore a JSON backup to continue.", true);
 }
+syncRosterFields();
 render();
 </script>
 </body>

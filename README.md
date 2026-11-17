@@ -42,3 +42,13 @@ Open [the standalone KOTC HTML](./paddlepot-kotc-offline.html) from your device 
 Wait order fills the available court spots. Players who sat out get first priority, followed by players returning from a break, then everyone else in wait order. Ladder position determines court assignment. Add late arrivals from **Players** to put them at the bottom of the ladder. Returning players keep their positions. Under **Results**, each player's longest streak counts consecutive completed games on Court 1. A sit-out pauses the streak.
 
 KOTC saves separately in the browser. Use **Settings → Back up JSON** to download a KOTC backup and **Restore JSON** from setup or Settings to load it. Restoring replaces the open KOTC session. Use the app that created the backup when restoring a Mixer or KOTC session.
+
+## Mixer v1.4.5
+
+Use **Release allocation** on an unscored court to cancel the game. Available players return to their racks or waiting queue with their previous wait priority. The allocation is removed from game history. A court marked unavailable stays unavailable when released.
+
+## King of the Court Offline v0.2.0
+
+Set up a session by player count or by name. In **Players → Add player**, leave the name blank to assign the next player number. Use the availability switches to manage who can play in the next round.
+
+Use **Release allocation** before saving any score for the round. Add players or switch players to unavailable, then review and restart the same round. Completed rounds and ladder movement carry forward.
