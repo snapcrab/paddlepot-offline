@@ -5,9 +5,9 @@ Run a doubles pickleball Mixer or King of the Court session in your browser.
 - [Open the Mixer](https://snapcrab.github.io/paddlepot-offline/paddlepot-offline.html)
 - [Download the HTML](https://github.com/snapcrab/paddlepot-offline/releases/latest/download/paddlepot-offline.html)
 - [Download the ZIP](https://github.com/snapcrab/paddlepot-offline/releases/latest/download/paddlepot-offline.zip)
-- [Read the Mixer user guide](./paddlepot-offline-user-guide.html)
+- [Read the Mixer User Guide](./paddlepot-offline-user-guide.html)
 - [Open the standalone King of the Court file](./paddlepot-kotc-offline.html)
-- [Read the King of the Court user guide](./paddlepot-kotc-offline-user-guide.html)
+- [Read the King of the Court User Guide](./paddlepot-kotc-offline-user-guide.html)
 
 ## Features
 
@@ -58,7 +58,7 @@ Use **Release allocation** before saving any score for the round. Add players or
 
 KOTC uses Mixer's layout, logo, local save indicator, embedded fonts, tabs and court cards. Partners appear as **Player 3 & Player 1**. Log each court's score from its card or save all entered scores from the Play tab.
 
-## HTML user guides
+## HTML User Guides
 
 The [Mixer guide for v1.4.5](./paddlepot-offline-user-guide.html) covers releasing an unscored court. The [King of the Court guide for v0.2.1](./paddlepot-kotc-offline-user-guide.html) covers round setup, rotation, release and results.
 
