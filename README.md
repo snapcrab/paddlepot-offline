@@ -52,3 +52,7 @@ Use **Release allocation** on an unscored court to cancel the game. Available pl
 Set up a session by player count or by name. In **Players → Add player**, leave the name blank to assign the next player number. Use the availability switches to manage who can play in the next round.
 
 Use **Release allocation** before saving any score for the round. Add players or switch players to unavailable, then review and restart the same round. Completed rounds and ladder movement carry forward.
+
+## King of the Court Offline v0.2.1
+
+KOTC uses Mixer's layout, logo, local save indicator, embedded fonts, tabs and court cards. Partners appear as **Player 3 & Player 1**. Log each court's score from its card or save all entered scores from the Play tab.
