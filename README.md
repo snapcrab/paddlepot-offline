@@ -34,3 +34,11 @@ The [MIT licence](./LICENSE) covers the original Mixer code. It allows use, adap
 See [Contributing](./CONTRIBUTING.md) to report a bug, share an idea or help improve the Mixer.
 
 Click the PaddlePot logo or name in the Mixer header to go to the [PaddlePot homepage](https://paddlepot.app/).
+
+## King of the Court Offline v0.1.0
+
+Open [the standalone KOTC HTML](./paddlepot-kotc-offline.html) from your device in a compatible browser. Enter player names and at least two courts, then preview the opening round. Allow four players per court. Save scores as games finish and check the next round's court assignments and sit-outs before starting it. You can correct scores until you advance or end the session.
+
+Wait order fills the available court spots. Players who sat out get first priority, followed by players returning from a break, then everyone else in wait order. Ladder position determines court assignment. Add late arrivals from **Players** to put them at the bottom of the ladder. Returning players keep their positions. Under **Results**, each player's longest streak counts consecutive completed games on Court 1. A sit-out pauses the streak.
+
+KOTC saves separately in the browser. Use **Settings → Back up JSON** to download a KOTC backup and **Restore JSON** from setup or Settings to load it. Restoring replaces the open KOTC session. Use the app that created the backup when restoring a Mixer or KOTC session.
